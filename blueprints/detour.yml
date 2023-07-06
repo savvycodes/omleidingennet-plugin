@@ -1,0 +1,27 @@
+# Each page blueprint must have a title, the title may be different from the file name
+# This default blueprint is used to display a page in the Panel whenever a custom page blueprint is missing.
+title: Omleiding
+
+# Each page can have an icon that is shown in page listings when no preview image is available.
+icon: 🗺️
+
+# Custom descriptions of page statuses depending on use case
+# More about page statuses: https://getkirby.com/docs/reference/panel/blueprints/page#statuses
+status:
+  draft: true
+  unlisted:
+    label: Hidden Page
+    text: The page is not listed
+  listed:
+    label: Listed Page
+    text: The page is listed
+
+# Define the form layout with two columns
+# Columns are optional but help structure the form layout
+# More about columns: https://getkirby.com/docs/guide/blueprints/layout#defining-columns
+columns:
+  - width: 2/3
+    # This columns only has a single field
+    fields:
+      text:
+        type: blocks
