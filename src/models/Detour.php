@@ -9,7 +9,7 @@ class DetourPage extends Page
 {
     public function fases()
     {
-        $fases = $this->content()->get('fases')->toArray();
+        $fases = A::get($this->content()->get('fases')->toArray(), 'fases');
         return $fases;
     }
 
