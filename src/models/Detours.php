@@ -44,7 +44,7 @@ class DetoursPage extends Page
                 'content' => [
                     'title'         => $page ? $page->title() : $detour['name'],
                     "description"   => $detour['description'],
-                    "status"        => $detour['status'],
+                    "detour_status" => $detour['status'],
                     "slug"          => $detour['slug'],
                     "cover"         => $detour['coverPhoto'],
                     "type"          => $detour['detourType'],
