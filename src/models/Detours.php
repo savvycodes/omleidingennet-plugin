@@ -121,7 +121,7 @@ query detours($organisationId: String!, $filter: DetoursFilter) {
         description
         beginDate
         endDate
-        transportations {
+        blockedTransportations {
           id
           name
         }
