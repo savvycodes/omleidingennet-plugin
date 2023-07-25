@@ -125,6 +125,10 @@ query detours($organisationId: String!, $filter: DetoursFilter) {
           id
           name
         }
+        availableTransportations {
+            id
+            name
+          }
         areas {
           name
           type
