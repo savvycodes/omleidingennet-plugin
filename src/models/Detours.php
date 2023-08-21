@@ -35,14 +35,12 @@ class DetoursPage extends Page
 
             $pages[] = [
                 'slug'      => $detour['slug'],
-                'num'       => $key + 1,
-                // 'num'       => 0,
+                'num'       => 0,
                 'template'  => 'detour',
                 'model'     => 'detour',
-                // 'status'    => $page ? $page->status() : 'listed',
-                // 'files'     => $page ? $page->files() : null,
+                'files'     => $page ? $page->files()->toArray() : null,
                 'content' => [
-                    'title'         => $page ? $page->title() : $detour['name'],
+                    'title'         => $page ? $page->title()->value() : $detour['name'],
                     "description"   => $detour['description'],
                     "detour_status" => $detour['status'],
                     "slug"          => $detour['slug'],
@@ -50,7 +48,8 @@ class DetoursPage extends Page
                     "type"          => $detour['detourType'],
                     "fases"         => $detour['fases'],
                     'uuid'          => $detour['id'],
-                ]
+                    'actions'       => $page ? $page->actions()->value() : null,
+                ],
             ];
         }
 
@@ -128,7 +127,7 @@ query detours($organisationId: String!, $filter: DetoursFilter) {
         availableTransportations {
             id
             name
-          }
+        }
         areas {
           name
           type
