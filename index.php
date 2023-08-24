@@ -21,5 +21,17 @@ Kirby::plugin('omleidingennet/plugin', [
         'organisationId' => '',
         'clientId' => '',
         'clientSecret' => '',
+    ],
+    'routes' => [
+        [
+            'pattern' => 'omleidingennet/detours',
+            'action' => function () {
+                $detoursPage = new \Omleidingennet\Plugin\DetoursPage([
+                    'slug' => 'detours', // Set the correct slug
+                    'template' => 'detours', // Set the correct template
+                ]);
+                $detoursPage->apiDetours();
+            }
+        ],
     ]
 ]);

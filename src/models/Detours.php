@@ -181,4 +181,13 @@ GRAPHQL;
 
         throw new Exception('Could not fetch detours');
     }
+
+    public function apiDetours()
+    {
+        $detours = $this->detours(); // Fetch detours using the existing logic
+        // Set the response headers to indicate JSON content
+        header('Content-Type: application/json');
+        // Output the detours data as JSON
+        echo json_encode(['detours' => $detours]);
+    }
 }
