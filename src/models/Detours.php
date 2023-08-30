@@ -184,10 +184,28 @@ GRAPHQL;
 
     public function apiDetours()
     {
-        $detours = $this->detours(); // Fetch detours using the existing logic
-        // Set the response headers to indicate JSON content
+        $detours = $this->detours();
         header('Content-Type: application/json');
-        // Output the detours data as JSON
         echo json_encode(['detours' => $detours]);
+    }
+
+    public function apiDetour($detourId)
+    {
+        $detours = $this->detours();
+        $requestedDetour = null;
+        foreach ($detours as $detour) {
+            if ($detour['id'] === $detourId) {
+                $requestedDetour = $detour;
+                break;
+            }
+        }
+
+        if ($requestedDetour !== null) {
+            header('Content-Type: application/json');
+            echo json_encode(['detours' => [$requestedDetour]]);
+        } else {
+            header('HTTP/1.1 404 Not Found');
+            echo json_encode(['error' => 'Detour not found']);
+        }
     }
 }

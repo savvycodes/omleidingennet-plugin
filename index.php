@@ -27,11 +27,22 @@ Kirby::plugin('omleidingennet/plugin', [
             'pattern' => 'omleidingennet/detours',
             'action' => function () {
                 $detoursPage = new \Omleidingennet\Plugin\DetoursPage([
-                    'slug' => 'detours', // Set the correct slug
-                    'template' => 'detours', // Set the correct template
+                    'slug' => 'detours',
+                    'template' => 'detours',
                 ]);
                 $detoursPage->apiDetours();
             }
         ],
-    ]
+        [
+            'pattern' => 'omleidingennet/detours/(:any)',
+            'action' => function ($detourId) {
+                $detoursPage = new \Omleidingennet\Plugin\DetoursPage([
+                    'slug' => 'detours',
+                    'template' => 'detours',
+                ]);
+                $detoursPage->apiGetDetour($detourId);
+            }
+        ],
+    ],
+
 ]);
