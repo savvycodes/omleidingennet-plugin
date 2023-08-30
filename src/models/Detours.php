@@ -47,7 +47,7 @@ class DetoursPage extends Page
                     "cover"           => $detour['coverPhoto'],
                     "type"            => $detour['detourType'],
                     "fases"           => $detour['fases'],
-                    "infraManager"    => $detour['infraManager'],
+                    "infraManager"    => isset($detour['infraManager']) ? $detour['infraManager'] : null,
                     'uuid'            => $detour['id'],
                     'actions'         => $page ? $page->actions()->value() : null,
                     'employer'        => $page ? $page->employer()->value() : null,
