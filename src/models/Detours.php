@@ -35,22 +35,24 @@ class DetoursPage extends Page
 
             $pages[] = [
                 'slug'      => $detour['slug'],
-                'num'       => $key + 1,
-                // 'num'       => 0,
+                'num'       => 0,
                 'template'  => 'detour',
                 'model'     => 'detour',
-                // 'status'    => $page ? $page->status() : 'listed',
-                // 'files'     => $page ? $page->files() : null,
+                'files'     => $page ? $page->files()->toArray() : null,
                 'content' => [
-                    'title'         => $page ? $page->title() : $detour['name'],
-                    "description"   => $detour['description'],
-                    "detour_status" => $detour['status'],
-                    "slug"          => $detour['slug'],
-                    "cover"         => $detour['coverPhoto'],
-                    "type"          => $detour['detourType'],
-                    "fases"         => $detour['fases'],
-                    'uuid'          => $detour['id'],
-                ]
+                    'title'          => $page ? $page->title()->value() : $detour['name'],
+                    "description"     => $detour['description'],
+                    "detour_status"   => $detour['status'],
+                    "slug"            => $detour['slug'],
+                    "cover"           => $detour['coverPhoto'],
+                    "type"            => $detour['detourType'],
+                    "fases"           => $detour['fases'],
+                    "infraManager"    => $detour['infraManager'],
+                    'uuid'            => $detour['id'],
+                    'actions'         => $page ? $page->actions()->value() : null,
+                    'employer'        => $page ? $page->employer()->value() : null,
+                    'logistic'        => $page ? $page->logistic()->value() : null,
+                ],
             ];
         }
 
@@ -106,6 +108,15 @@ query detours($organisationId: String!, $filter: DetoursFilter) {
       description
       slug
       status
+      infraManager {
+        name
+        website
+        phoneNumber
+        emailAddress
+        logo {
+          url
+        }
+      }
       detourType {
         id
         name
@@ -128,7 +139,7 @@ query detours($organisationId: String!, $filter: DetoursFilter) {
         availableTransportations {
             id
             name
-          }
+        }
         areas {
           name
           type
@@ -178,7 +189,6 @@ GRAPHQL;
             $cache->set('detours', $data['data']['detours']['detours'], option('omleidingennet.plugin.ttl'));
             return $data['data']['detours']['detours'];
         }
-
         throw new Exception('Could not fetch detours');
     }
 

@@ -3,7 +3,9 @@
 namespace Omleidingennet\Plugin;
 
 use Kirby\Cms\Page;
+use Kirby\Cms\Pages;
 use Kirby\Toolkit\A;
+use Kirby\Toolkit\Str;
 
 class DetourPage extends Page
 {
