@@ -7,6 +7,7 @@ use Kirby\Cms\Page;
 use Kirby\Cms\Pages;
 use Kirby\Cms\Response;
 use Kirby\Http\Remote;
+use Kirby\Toolkit\A;
 
 class DetoursPage extends Page
 {
@@ -186,9 +187,15 @@ GRAPHQL;
             if (isset($data['error'])) {
                 throw new Exception($data['error']['message']);
             }
+
+            $detours = $data['data']['detours']['detours'];
+            $detours = array_values(A::filter($detours, function ($detour) {
+                return $detour['status'] != 'Concept';
+            }));
+
             // cache for ttl minutes
-            $cache->set('detours', $data['data']['detours']['detours'], option('omleidingennet.plugin.ttl'));
-            return $data['data']['detours']['detours'];
+            $cache->set('detours', $detours, option('omleidingennet.plugin.ttl'));
+            return $detours;
         }
         throw new Exception('Could not fetch detours');
     }
