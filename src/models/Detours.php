@@ -5,6 +5,7 @@ namespace Omleidingennet\Plugin;
 use Exception;
 use Kirby\Cms\Page;
 use Kirby\Cms\Pages;
+use Kirby\Cms\Response;
 use Kirby\Http\Remote;
 
 class DetoursPage extends Page
@@ -195,8 +196,7 @@ GRAPHQL;
     public function apiDetours()
     {
         $detours = $this->detours();
-        header('Content-Type: application/json');
-        echo json_encode(['detours' => $detours]);
+        return Response::json(['detours' => $detours]);
     }
 
     public function apiDetour($detourId)
@@ -211,11 +211,9 @@ GRAPHQL;
         }
 
         if ($requestedDetour !== null) {
-            header('Content-Type: application/json');
-            echo json_encode(['detours' => [$requestedDetour]]);
+            return Response::json(['detours' => [$requestedDetour]]);
         } else {
-            header('HTTP/1.1 404 Not Found');
-            echo json_encode(['error' => 'Detour not found']);
+            return Response::json(['error' => 'Detour not found'], 404);
         }
     }
 }

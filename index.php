@@ -30,7 +30,7 @@ Kirby::plugin('omleidingennet/plugin', [
                     'slug' => 'detours',
                     'template' => 'detours',
                 ]);
-                $detoursPage->apiDetours();
+                return $detoursPage->apiDetours();
             }
         ],
         [
@@ -40,7 +40,7 @@ Kirby::plugin('omleidingennet/plugin', [
                     'slug' => 'detours',
                     'template' => 'detours',
                 ]);
-                $detoursPage->apiDetour($detourId);
+                return $detoursPage->apiDetour($detourId);
             }
         ],
     ],
