@@ -5,101 +5,102 @@ namespace Omleidingennet\Plugin;
 use Exception;
 use Kirby\Cms\Page;
 use Kirby\Cms\Pages;
+use Kirby\Cms\Response;
 use Kirby\Http\Remote;
 
 class DetoursPage extends Page
 {
-  static $subpages = null;
+    static $subpages = null;
 
-  public function subpages()
-  {
-    if (static::$subpages) {
-      return static::$subpages;
+    public function subpages()
+    {
+        if (static::$subpages) {
+            return static::$subpages;
+        }
+
+        return static::$subpages = Pages::factory($this->inventory()['children'], $this);
     }
 
-    return static::$subpages = Pages::factory($this->inventory()['children'], $this);
-  }
+    public function children()
+    {
+        if ($this->children instanceof Pages) {
+            return $this->children;
+        }
 
-  public function children()
-  {
-    if ($this->children instanceof Pages) {
-      return $this->children;
+        $results = $this->detours();
+        $pages   = [];
+
+        foreach ($results as $key => $detour) {
+            $slug = $detour['slug'];
+            $page = $this->subpages()->find($slug);
+
+            $pages[] = [
+                'slug'      => $detour['slug'],
+                'num'       => 0,
+                'template'  => 'detour',
+                'model'     => 'detour',
+                'files'     => $page ? $page->files()->toArray() : null,
+                'content' => [
+                    'title'          => $page ? $page->title()->value() : $detour['name'],
+                    "description"     => $detour['description'],
+                    "detour_status"   => $detour['status'],
+                    "slug"            => $detour['slug'],
+                    "cover"           => $detour['coverPhoto'],
+                    "type"            => $detour['detourType'],
+                    "fases"           => $detour['fases'],
+                    "infraManager"    => isset($detour['infraManager']) ? $detour['infraManager'] : null,
+                    'uuid'            => $detour['id'],
+                    'actions'         => $page ? $page->actions()->value() : null,
+                    'employer'        => $page ? $page->employer()->value() : null,
+                    'logistic'        => $page ? $page->logistic()->value() : null,
+                ],
+            ];
+        }
+
+        return $this->children = Pages::factory($pages, $this);
     }
 
-    $results = $this->detours();
-    $pages   = [];
+    private function getToken()
+    {
+        $cache = kirby()->cache('omleidingennet.plugin');
+        $token = $cache->get('token');
 
-    foreach ($results as $key => $detour) {
-      $slug = $detour['slug'];
-      $page = $this->subpages()->find($slug);
+        if ($token === null) {
+            // get access token from omleidingennet
+            $res = Remote::post(option('omleidingennet.plugin.url') . '/oauth/token', [
+                'headers' => [
+                    'Content-Type: application/json',
+                ],
+                'data' => json_encode([
+                    'grant_type' => 'client_credentials',
+                    'client_id' => option('omleidingennet.plugin.clientId'),
+                    'client_secret' => option('omleidingennet.plugin.clientSecret'),
+                    'audience' => "https://www.omleidingennet.nl/api/graphql",
+                ])
+            ]);
 
-      $pages[] = [
-        'slug'      => $detour['slug'],
-        'num'       => 0,
-        'template'  => 'detour',
-        'model'     => 'detour',
-        'files'     => $page ? $page->files()->toArray() : null,
-        'content' => [
-          'title'          => $page ? $page->title()->value() : $detour['name'],
-          "description"     => $detour['description'],
-          "detour_status"   => $detour['status'],
-          "slug"            => $detour['slug'],
-          "cover"           => $detour['coverPhoto'],
-          "type"            => $detour['detourType'],
-          "fases"           => $detour['fases'],
-          "infraManager"    => $detour['infraManager'],
-          'uuid'            => $detour['id'],
-          'actions'         => $page ? $page->actions()->value() : null,
-          'employer'        => $page ? $page->employer()->value() : null,
-          'logistic'        => $page ? $page->logistic()->value() : null,
-        ],
-      ];
+            if ($res->code() === 200) {
+                $data = $res->json();
+
+                $cache->set('token', $data['access_token'], $data['expires_in'] / 60);
+                return $data['access_token'];
+            }
+            throw new Exception('Could not fetch access token');
+        }
+
+        return $token;
     }
 
-    return $this->children = Pages::factory($pages, $this);
-  }
+    private function detours()
+    {
+        $cache = kirby()->cache('omleidingennet.plugin');
+        $detours = $cache->get('detours');
 
-  private function getToken()
-  {
-    $cache = kirby()->cache('omleidingennet.plugin');
-    $token = $cache->get('token');
+        if ($detours !== null) {
+            return $detours;
+        }
 
-    if ($token === null) {
-      // get access token from omleidingennet
-      $res = Remote::post(option('omleidingennet.plugin.url') . '/oauth/token', [
-        'headers' => [
-          'Content-Type: application/json',
-        ],
-        'data' => json_encode([
-          'grant_type' => 'client_credentials',
-          'client_id' => option('omleidingennet.plugin.clientId'),
-          'client_secret' => option('omleidingennet.plugin.clientSecret'),
-          'audience' => "https://www.omleidingennet.nl/api/graphql",
-        ])
-      ]);
-
-      if ($res->code() === 200) {
-        $data = $res->json();
-
-        $cache->set('token', $data['access_token'], $data['expires_in'] / 60);
-        return $data['access_token'];
-      }
-      throw new Exception('Could not fetch access token');
-    }
-
-    return $token;
-  }
-
-  private function detours()
-  {
-    $cache = kirby()->cache('omleidingennet.plugin');
-    $detours = $cache->get('detours');
-
-    if ($detours !== null) {
-      return $detours;
-    }
-
-    $query = <<<'GRAPHQL'
+        $query = <<<'GRAPHQL'
 query detours($organisationId: String!, $filter: DetoursFilter) {
   detours(organisationId: $organisationId, filter:$filter) {
     detours {
@@ -163,33 +164,56 @@ query detours($organisationId: String!, $filter: DetoursFilter) {
 }
 GRAPHQL;
 
-    // get detours from omleidingennet
-    $token = $this->getToken();
+        // get detours from omleidingennet
+        $token = $this->getToken();
 
-    $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
-      'headers' => [
-        'Content-Type: application/json',
-        'Authorization: Bearer ' . $token
-      ],
-      'data' => json_encode([
-        'query' => $query,
-        'variables' => [
-          'organisationId' => option('omleidingennet.plugin.organisationId'),
-          'filter' => []
-        ]
-      ])
-    ]);
+        $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
+            'headers' => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $token
+            ],
+            'data' => json_encode([
+                'query' => $query,
+                'variables' => [
+                    'organisationId' => option('omleidingennet.plugin.organisationId'),
+                    'filter' => []
+                ]
+            ])
+        ]);
 
-    if ($res->code() === 200) {
-      $data = $res->json();
-      if (isset($data['error'])) {
-        throw new Exception($data['error']['message']);
-      }
-      // cache for ttl minutes
-      $cache->set('detours', $data['data']['detours']['detours'], option('omleidingennet.plugin.ttl'));
-      return $data['data']['detours']['detours'];
+        if ($res->code() === 200) {
+            $data = $res->json();
+            if (isset($data['error'])) {
+                throw new Exception($data['error']['message']);
+            }
+            // cache for ttl minutes
+            $cache->set('detours', $data['data']['detours']['detours'], option('omleidingennet.plugin.ttl'));
+            return $data['data']['detours']['detours'];
+        }
+        throw new Exception('Could not fetch detours');
     }
 
-    throw new Exception('Could not fetch detours');
-  }
+    public function apiDetours()
+    {
+        $detours = $this->detours();
+        return Response::json(['detours' => $detours]);
+    }
+
+    public function apiDetour($detourId)
+    {
+        $detours = $this->detours();
+        $requestedDetour = null;
+        foreach ($detours as $detour) {
+            if ($detour['id'] === $detourId) {
+                $requestedDetour = $detour;
+                break;
+            }
+        }
+
+        if ($requestedDetour !== null) {
+            return Response::json(['detours' => [$requestedDetour]]);
+        } else {
+            return Response::json(['error' => 'Detour not found'], 404);
+        }
+    }
 }
