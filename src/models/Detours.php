@@ -28,7 +28,10 @@ class DetoursPage extends Page
             return $this->children;
         }
 
-        $results = $this->detours();
+        $search = get('search');
+        $status = get('status');
+        $areas = get('areas');
+        $results = $this->detours($search, $status, $areas);
         $pages   = [];
 
         foreach ($results as $key => $detour) {
@@ -92,12 +95,18 @@ class DetoursPage extends Page
         return $token;
     }
 
-    private function detours()
+    private function detours($search = null, $status = null, $areas = null)
     {
         $cache = kirby()->cache('omleidingennet.plugin');
         $detours = $cache->get('detours');
-
-        if ($detours !== null) {
+        // only serve from cache when $search, $status or $areas is not set
+        if ($detours !== null && ($search === null && $status === null && $areas === null)) {
+            $detours = array_values(A::filter($detours, function ($detour) use ($status) {
+                if (!$status) {
+                    return $detour['status'] != 'Afgerond';
+                }
+                return $detour['status'] == $status;
+            }));
             return $detours;
         }
 
@@ -157,6 +166,109 @@ query detours($organisationId: String!, $filter: DetoursFilter) {
     }
     totalCount
   }
+}
+GRAPHQL;
+
+        // get detours from omleidingennet
+        $token = $this->getToken();
+        $take = 1000; // todo: pagination
+
+        $filter = [
+            'take' => $take,
+        ];
+
+        if ($search) {
+            $filter['query']  = $search;
+        }
+        if ($status) {
+            $filter['status'] = $status;
+        }
+        if ($areas) {
+            $filter['areas'] = [$areas];
+        }
+
+        $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
+            'headers' => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $token
+            ],
+            'data' => json_encode([
+                'query' => $query,
+                'variables' => [
+                    'organisationId' => option('omleidingennet.plugin.organisationId'),
+                    'filter' => $filter
+                ]
+            ])
+        ]);
+
+        if ($res->code() === 200) {
+            $data = $res->json();
+            if (isset($data['error'])) {
+                throw new Exception($data['error']['message']);
+            }
+
+            $detours = $data['data']['detours']['detours'];
+            $detours = array_values(A::filter($detours, function ($detour) {
+                return $detour['status'] != 'Concept';
+            }));
+
+            // cache for ttl minutes
+            if (($search === null && $status === null && $areas === null)) {
+                $cache->set('detours', $detours, option('omleidingennet.plugin.ttl'));
+            }
+
+            $detours = array_values(A::filter($detours, function ($detour) use ($status) {
+                if (!$status) {
+                    return $detour['status'] != 'Afgerond';
+                }
+                return $detour['status'] == $status;
+            }));
+
+            return $detours;
+        }
+        throw new Exception('Could not fetch detours');
+    }
+
+    public function apiDetours()
+    {
+        $search = get('search');
+        $status = get('status');
+        $areas = get('areas');
+        $detours = $this->detours($search, $status, $areas);
+
+        return Response::json(['detours' => $detours]);
+    }
+
+    public function apiDetour($detourId)
+    {
+        $detours = $this->detours();
+        $requestedDetour = null;
+        foreach ($detours as $detour) {
+            if ($detour['id'] === $detourId) {
+                $requestedDetour = $detour;
+                break;
+            }
+        }
+
+        if ($requestedDetour !== null) {
+            return Response::json(['detours' => [$requestedDetour]]);
+        } else {
+            return Response::json(['error' => 'Detour not found'], 404);
+        }
+    }
+
+    private function fetchAreas()
+    {
+        $key = 'areas.' . option('omleidingennet.plugin.organisationId');
+        $cache = kirby()->cache('omleidingennet.plugin');
+        $areas = $cache->get($key);
+        // only serve from cache when $search, $status or $areas is not set
+        if ($areas !== null) {
+            return $areas;
+        }
+
+        $query = <<<'GRAPHQL'
+query areas($organisationId: String!) {
   areas(organisationId: $organisationId) {
     id
     name
@@ -177,7 +289,6 @@ GRAPHQL;
                 'query' => $query,
                 'variables' => [
                     'organisationId' => option('omleidingennet.plugin.organisationId'),
-                    'filter' => []
                 ]
             ])
         ]);
@@ -188,39 +299,42 @@ GRAPHQL;
                 throw new Exception($data['error']['message']);
             }
 
-            $detours = $data['data']['detours']['detours'];
-            $detours = array_values(A::filter($detours, function ($detour) {
-                return $detour['status'] != 'Concept';
-            }));
+            $areas = $data['data']['areas'];
 
             // cache for ttl minutes
-            $cache->set('detours', $detours, option('omleidingennet.plugin.ttl'));
-            return $detours;
-        }
-        throw new Exception('Could not fetch detours');
-    }
-
-    public function apiDetours()
-    {
-        $detours = $this->detours();
-        return Response::json(['detours' => $detours]);
-    }
-
-    public function apiDetour($detourId)
-    {
-        $detours = $this->detours();
-        $requestedDetour = null;
-        foreach ($detours as $detour) {
-            if ($detour['id'] === $detourId) {
-                $requestedDetour = $detour;
-                break;
+            if ($areas) {
+                $cache->set($key, $areas, option('omleidingennet.plugin.ttl'));
             }
+
+            return $areas;
+        }
+        throw new Exception('Could not fetch areas');
+    }
+
+    public function areas()
+    {
+        $areas = $this->fetchAreas();
+        $pages = [];
+
+        foreach ($areas as $key => $area) {
+            $slug = $area['id'];
+            $page = $this->subpages()->find($slug);
+
+            $pages[] = [
+                'slug'      => $area['id'],
+                'num'       => 0,
+                'template'  => 'area',
+                'model'     => 'area',
+                'files'     => $page ? $page->files()->toArray() : null,
+                'content' => [
+                    'title'          => $page ? $page->title()->value() : $area['name'],
+                    "type"            => $area['type'],
+                    'uuid'            => $area['id'],
+                    'name' => $area['id']
+                ],
+            ];
         }
 
-        if ($requestedDetour !== null) {
-            return Response::json(['detours' => [$requestedDetour]]);
-        } else {
-            return Response::json(['error' => 'Detour not found'], 404);
-        }
+        return Pages::factory($pages, $this);
     }
 }
