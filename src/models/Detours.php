@@ -103,7 +103,7 @@ class DetoursPage extends Page
 
         $detours = $cache->get($cacheKey);
         // only serve from cache when $search, $status or $areas is not set
-        if ($detours !== null && $search === null) {
+        if ($detours !== null && empty($search)) {
             $detours = array_values(A::filter($detours, function ($detour) use ($status) {
                 if (!$status) {
                     return $detour['status'] != 'Afgerond';
@@ -216,7 +216,7 @@ GRAPHQL;
             }));
 
             // cache for ttl minutes
-            if ($search === null) {
+            if (empty($search)) {
                 $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
             }
 
