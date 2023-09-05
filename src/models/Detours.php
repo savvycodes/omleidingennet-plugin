@@ -98,9 +98,12 @@ class DetoursPage extends Page
     private function detours($search = null, $status = null, $areas = null)
     {
         $cache = kirby()->cache('omleidingennet.plugin');
-        $detours = $cache->get('detours');
+        // create sha256 of status and areas
+        $cacheKey = "detours." . hash('sha256', $status . $areas) . option('omleidingennet.plugin.organisationId');
+
+        $detours = $cache->get($cacheKey);
         // only serve from cache when $search, $status or $areas is not set
-        if ($detours !== null && ($search === null && $status === null && $areas === null)) {
+        if ($detours !== null && $search === null) {
             $detours = array_values(A::filter($detours, function ($detour) use ($status) {
                 if (!$status) {
                     return $detour['status'] != 'Afgerond';
@@ -213,8 +216,8 @@ GRAPHQL;
             }));
 
             // cache for ttl minutes
-            if (($search === null && $status === null && $areas === null)) {
-                $cache->set('detours', $detours, option('omleidingennet.plugin.ttl'));
+            if ($search === null) {
+                $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
             }
 
             $detours = array_values(A::filter($detours, function ($detour) use ($status) {
