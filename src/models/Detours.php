@@ -29,7 +29,7 @@ class DetoursPage extends Page
         }
 
         $search = get('search');
-        $status = get('status');
+        $status = get('detour_status');
         $areas = get('areas');
         $results = $this->detours($search, $status, $areas);
         $pages   = [];
@@ -45,7 +45,7 @@ class DetoursPage extends Page
                 'model'     => 'detour',
                 'files'     => $page ? $page->files()->toArray() : null,
                 'content' => [
-                    'title'          => $page ? $page->title()->value() : $detour['name'],
+                    'title'           => $detour['name'],
                     "description"     => $detour['description'],
                     "detour_status"   => $detour['status'],
                     "slug"            => $detour['slug'],
@@ -98,12 +98,14 @@ class DetoursPage extends Page
     private function detours($search = null, $status = null, $areas = null)
     {
         $cache = kirby()->cache('omleidingennet.plugin');
+        $hash = hash('sha256', $status ?? '' . $areas ?? '');
+
         // create sha256 of status and areas
-        $cacheKey = "detours." . hash('sha256', $status . $areas) . option('omleidingennet.plugin.organisationId');
+        $cacheKey = "detours." . $hash . option('omleidingennet.plugin.organisationId');
 
         $detours = $cache->get($cacheKey);
         // only serve from cache when $search, $status or $areas is not set
-        if ($detours !== null && empty($search)) {
+        if ($detours !== null && empty(isset($search))) {
             $detours = array_values(A::filter($detours, function ($detour) use ($status) {
                 if (!$status) {
                     return $detour['status'] != 'Afgerond';
@@ -180,13 +182,13 @@ GRAPHQL;
             'take' => $take,
         ];
 
-        if ($search) {
+        if (isset($search) && !empty($search)) {
             $filter['query']  = $search;
         }
-        if ($status) {
+        if (isset($status) && !empty($status)) {
             $filter['status'] = $status;
         }
-        if ($areas) {
+        if (isset($areas) && !empty($areas)) {
             $filter['areas'] = [$areas];
         }
 
@@ -235,7 +237,7 @@ GRAPHQL;
     public function apiDetours()
     {
         $search = get('search');
-        $status = get('status');
+        $status = get('detour_status');
         $areas = get('areas');
         $detours = $this->detours($search, $status, $areas);
 
