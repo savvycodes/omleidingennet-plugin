@@ -49,6 +49,7 @@ class DetoursPage extends Page
                     "description"     => $detour['description'],
                     "detour_status"   => $detour['status'],
                     "slug"            => $detour['slug'],
+                    "website"         => $detour['website'],
                     "cover"           => $detour['coverPhoto'],
                     "type"            => $detour['detourType'],
                     "fases"           => $detour['fases'],
@@ -123,9 +124,10 @@ query detours($organisationId: String!, $filter: DetoursFilter) {
       name
       description
       slug
+      website
       status
       infraManager {
-        name
+          name
         website
         phoneNumber
         emailAddress
