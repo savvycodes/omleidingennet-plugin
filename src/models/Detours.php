@@ -99,7 +99,8 @@ class DetoursPage extends Page
     private function detours($search = null, $status = null, $areas = null)
     {
         $cache = kirby()->cache('omleidingennet.plugin');
-        $hash = hash('sha256', $status ?? '' . $areas ?? '');
+        $hashKey = (empty($status) ? '' :  $status) . (empty($areas) ? '' : $areas);
+        $hash = hash('sha256', $hashKey);
 
         // create sha256 of status and areas
         $cacheKey = "detours." . $hash . option('omleidingennet.plugin.organisationId');
