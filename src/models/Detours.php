@@ -32,32 +32,32 @@ class DetoursPage extends Page
         $status = get('detour_status');
         $areas = get('areas');
         $results = $this->detours($search, $status, $areas);
-        $pages   = [];
+        $pages = [];
 
         foreach ($results as $key => $detour) {
             $slug = $detour['slug'];
             $page = $this->subpages()->find($slug);
 
             $pages[] = [
-                'slug'      => $detour['slug'],
-                'num'       => 0,
-                'template'  => 'detour',
-                'model'     => 'detour',
-                'files'     => $page ? $page->files()->toArray() : null,
+                'slug' => $detour['slug'],
+                'num' => 0,
+                'template' => 'detour',
+                'model' => 'detour',
+                'files' => $page ? $page->files()->toArray() : null,
                 'content' => [
-                    'title'           => $detour['name'],
-                    "description"     => $detour['description'],
-                    "detour_status"   => $detour['status'],
-                    "slug"            => $detour['slug'],
-                    "website"         => $detour['website'],
-                    "cover"           => $detour['coverPhoto'],
-                    "type"            => $detour['detourType'],
-                    "fases"           => $detour['fases'],
-                    "infraManager"    => isset($detour['infraManager']) ? $detour['infraManager'] : null,
-                    'uuid'            => $detour['id'],
-                    'actions'         => $page ? $page->actions()->value() : null,
-                    'employer'        => $page ? $page->employer()->value() : null,
-                    'logistic'        => $page ? $page->logistic()->value() : null,
+                    'title' => $detour['name'],
+                    "description" => $detour['description'],
+                    "detour_status" => $detour['status'],
+                    "slug" => $detour['slug'],
+                    "website" => $detour['website'],
+                    "cover" => $detour['coverPhoto'],
+                    "type" => $detour['detourType'],
+                    "fases" => $detour['fases'],
+                    "infraManager" => isset($detour['infraManager']) ? $detour['infraManager'] : null,
+                    'uuid' => $detour['id'],
+                    'actions' => $page ? $page->actions()->value() : null,
+                    'employer' => $page ? $page->employer()->value() : null,
+                    'logistic' => $page ? $page->logistic()->value() : null,
                 ],
             ];
         }
@@ -145,6 +145,7 @@ query detours($organisationId: String!, $filter: DetoursFilter) {
         slug
       }
       fases {
+        id
         name
         slug
         status
@@ -160,6 +161,7 @@ query detours($organisationId: String!, $filter: DetoursFilter) {
             name
         }
         areas {
+          id
           name
           type
           geometry
@@ -186,7 +188,7 @@ GRAPHQL;
         ];
 
         if (isset($search) && !empty($search)) {
-            $filter['query']  = $search;
+            $filter['query'] = $search;
         }
         if (isset($status) && !empty($status)) {
             $filter['status'] = $status;
@@ -329,15 +331,15 @@ GRAPHQL;
             $page = $this->subpages()->find($slug);
 
             $pages[] = [
-                'slug'      => $area['id'],
-                'num'       => 0,
-                'template'  => 'area',
-                'model'     => 'area',
-                'files'     => $page ? $page->files()->toArray() : null,
+                'slug' => $area['id'],
+                'num' => 0,
+                'template' => 'area',
+                'model' => 'area',
+                'files' => $page ? $page->files()->toArray() : null,
                 'content' => [
-                    'title'          => $page ? $page->title()->value() : $area['name'],
-                    "type"            => $area['type'],
-                    'uuid'            => $area['id'],
+                    'title' => $page ? $page->title()->value() : $area['name'],
+                    "type" => $area['type'],
+                    'uuid' => $area['id'],
                     'name' => $area['id']
                 ],
             ];
