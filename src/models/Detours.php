@@ -160,6 +160,10 @@ query detours($organisationId: String!, $filter: DetoursFilter) {
             id
             name
         }
+        limitedTransportations {
+            id
+            name
+        }
         areas {
           id
           name
