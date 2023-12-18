@@ -1,6 +1,7 @@
 <?php
 
 F::loadClasses([
+    'omleidingennet\\plugin\\token' => 'src/Token.php',
     'omleidingennet\\plugin\\detourspage' => 'src/models/Detours.php',
     'omleidingennet\\plugin\\detourpage' => 'src/models/Detour.php',
 ], __DIR__);
