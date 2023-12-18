@@ -58,7 +58,6 @@ class DetoursPage extends Page
                     'actions' => $page ? $page->actions()->value() : null,
                     'employer' => $page ? $page->employer()->value() : null,
                     'logistic' => $page ? $page->logistic()->value() : null,
-                    'logistic' => $page ? $page->logistic()->value() : null,
                 ],
             ];
         }
