@@ -159,7 +159,7 @@ GRAPHQL;
 
         // get detours from omleidingennet
         $token = $this->getToken();
-        $take = 1000; // todo: pagination
+        $take = 10; // todo: pagination
 
         $filter = [
             'take' => $take,
@@ -175,46 +175,54 @@ GRAPHQL;
             $filter['areas'] = [$areas];
         }
 
-        $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
-            'headers' => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $token
-            ],
-            'data' => json_encode([
-                'query' => $query,
-                'variables' => [
-                    'organisationId' => option('omleidingennet.plugin.organisationId'),
-                    'filter' => $filter
-                ]
-            ])
-        ]);
+        // contiously fetch detours until totalCount is reached
+        $detours = [];
+        $skip = 0;
+        $totalCount = 0;
+        do {
+            $filter['skip'] = $skip;
+            $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
+                'headers' => [
+                    'Content-Type: application/json',
+                    'Authorization: Bearer ' . $token
+                ],
+                'data' => json_encode([
+                    'query' => $query,
+                    'variables' => [
+                        'organisationId' => option('omleidingennet.plugin.organisationId'),
+                        'filter' => $filter
+                    ]
+                ])
+            ]);
 
-        if ($res->code() === 200) {
-            $data = $res->json();
-            if (isset($data['error'])) {
-                throw new Exception($data['error']['message']);
-            }
-
-            $detours = $data['data']['detours']['detours'];
-            $detours = array_values(A::filter($detours, function ($detour) {
-                return $detour['status'] != 'Concept';
-            }));
-
-            // cache for ttl minutes
-            if (empty($search)) {
-                $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
-            }
-
-            $detours = array_values(A::filter($detours, function ($detour) use ($status) {
-                if (!$status) {
-                    return $detour['status'] != 'Afgerond';
+            if ($res->code() === 200) {
+                $data = $res->json();
+                if (isset($data['error'])) {
+                    throw new Exception($data['error']['message']);
                 }
-                return $detour['status'] == $status;
-            }));
 
-            return $detours;
+                $totalCount = $data['data']['detours']['totalCount'];
+                $detours = array_merge($detours, $data['data']['detours']['detours']);
+                $skip += $take;
+            } else {
+                // disabled for now to prevent site from crashing
+                // throw new Exception('Could not fetch detours');
+            }
+        } while (count($detours) < $totalCount);
+
+        // cache for ttl minutes
+        if (empty($search)) {
+            $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
         }
-        throw new Exception('Could not fetch detours');
+
+        $detours = array_values(A::filter($detours, function ($detour) use ($status) {
+            if (!$status) {
+                return $detour['status'] != 'Afgerond';
+            }
+            return $detour['status'] == $status;
+        }));
+
+        return $detours;
     }
 
     public function apiDetours()
