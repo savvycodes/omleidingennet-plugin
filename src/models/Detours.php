@@ -82,12 +82,12 @@ class DetoursPage extends Page
         $detours = $cache->get($cacheKey);
         // only serve from cache when $search, $status or $areas is not set
         if ($detours !== null && empty(isset($search))) {
-            $detours = array_values(A::filter($detours, function ($detour) use ($status) {
-                if (!$status) {
-                    return $detour['status'] != 'Afgerond';
-                }
-                return $detour['status'] == $status;
-            }));
+            // $detours = array_values(A::filter($detours, function ($detour) use ($status) {
+            //     if (!$status) {
+            //         return $detour['status'] != 'Afgerond';
+            //     }
+            //     return $detour['status'] == $status;
+            // }));
             return $detours;
         }
 
@@ -215,12 +215,12 @@ GRAPHQL;
             $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
         }
 
-        $detours = array_values(A::filter($detours, function ($detour) use ($status) {
-            if (!$status) {
-                return $detour['status'] != 'Afgerond';
-            }
-            return $detour['status'] == $status;
-        }));
+        // $detours = array_values(A::filter($detours, function ($detour) use ($status) {
+        //     if (!$status) {
+        //         return $detour['status'] != 'Afgerond';
+        //     }
+        //     return $detour['status'] == $status;
+        // }));
 
         return $detours;
     }
