@@ -63,7 +63,7 @@ Kirby::plugin('omleidingennet/plugin', [
         [
             'pattern' => 'omleidingennet/pois/(:any)',
             'action' => function ($id) {
-                $poisPage = new \Omleidingennet\Plugin\PoiPage([
+                $poisPage = new \Omleidingennet\Plugin\PoisPage([
                     'slug' => 'pois',
                     'template' => 'pois',
                 ]);
