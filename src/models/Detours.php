@@ -197,6 +197,7 @@ GRAPHQL;
 
             if ($res->code() === 200) {
                 $data = $res->json();
+                
                 if (isset($data['error'])) {
                     throw new Exception($data['error']['message']);
                 }

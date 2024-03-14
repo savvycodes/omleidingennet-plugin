@@ -33,22 +33,22 @@ class PoisPage extends Page
         $pages = [];
 
         foreach ($results as $key => $detour) {
-            $slug = $detour['slug'];
-            $page = $this->subpages()->find($slug);
+            $slug = 'poi-' . $detour['id'];
 
             $pages[] = [
-                'slug' => $detour['slug'],
                 'num' => 0,
-                'template' => 'pois',
-                'model' => 'pois',
-                'files' => $page ? $page->files()->toArray() : null,
+                'slug' => $slug,
+                'template' => 'point-of-interest',
+                'model' => 'PointOfInterest',
                 'content' => [
                     'title' => $detour['name'],
-                    // "description" => $detour['description'],
+                    "description" => $detour['description'],
+                    'begin_date' => $detour['beginDate'],
+                    'end_date' => $detour['endDate'],
                     // "detour_status" => $detour['status'],
                     // "slug" => $detour['slug'],
                     // "website" => $detour['website'],
-                    // "cover" => $detour['coverPhoto'],
+                    "cover" => $detour['coverPhoto'],
                     // "type" => $detour['detourType'],
                     // "fases" => $detour['fases'],
                     // "infraManager" => isset($detour['infraManager']) ? $detour['infraManager'] : null,
@@ -79,15 +79,15 @@ class PoisPage extends Page
 
         $pois = $cache->get($cacheKey);
         // only serve from cache when $search, $status or $areas is not set
-        // if ($pois !== null && empty(isset($search))) {
-        //     // $pois = array_values(A::filter($pois, function ($poi) use ($status) {
-        //     //     if (!$status) {
-        //     //         return $poi['status'] != 'Afgerond';
-        //     //     }
-        //     //     return $poi['status'] == $status;
-        //     // }));
-        //     return $pois;
-        // }
+        if ($pois !== null && empty(isset($search))) {
+            // $pois = array_values(A::filter($pois, function ($poi) use ($status) {
+            //     if (!$status) {
+            //         return $poi['status'] != 'Afgerond';
+            //     }
+            //     return $poi['status'] == $status;
+            // }));
+            return $pois;
+        }
 
         $query = <<<'GRAPHQL'
         query pointOfInterests($organisationId: String!, $filter: PoiFilter) {
@@ -153,7 +153,6 @@ GRAPHQL;
 
             if ($res->code() === 200) {
                 $data = $res->json();
-                throw new Exception(json_encode($data));
                 if (isset($data['error'])) {
                     throw new Exception($data['error']['message']);
                 }
@@ -169,9 +168,9 @@ GRAPHQL;
         // } while (count($arr) < $totalCount);
 
         // cache for ttl minutes
-        // if (empty($search)) {
-        //     $cache->set($cacheKey, $arr, option('omleidingennet.plugin.ttl'));
-        // }
+        if (empty($search)) {
+            $cache->set($cacheKey, $arr, option('omleidingennet.plugin.ttl'));
+        }
 
         // $arr = array_values(A::filter($arr, function ($detour) use ($status) {
         //     if (!$status) {
@@ -191,21 +190,21 @@ GRAPHQL;
         return Response::json(['pois' => $pois]);
     }
 
-    // public function apiDetour($detourId)
-    // {
-    //     $detours = $this->detours();
-    //     $requestedDetour = null;
-    //     foreach ($detours as $detour) {
-    //         if ($detour['id'] === $detourId) {
-    //             $requestedDetour = $detour;
-    //             break;
-    //         }
-    //     }
+    public function apiPointOfInterest($detourId)
+    {
+        $detours = $this->pois();
+        $requestedDetour = null;
+        foreach ($detours as $detour) {
+            if ($detour['id'] === $detourId) {
+                $requestedDetour = $detour;
+                break;
+            }
+        }
 
-    //     if ($requestedDetour !== null) {
-    //         return Response::json(['detours' => [$requestedDetour]]);
-    //     } else {
-    //         return Response::json(['error' => 'Detour not found'], 404);
-    //     }
-    // }
+        if ($requestedDetour !== null) {
+            return Response::json(['pois' => [$requestedDetour]]);
+        } else {
+            return Response::json(['error' => 'Detour not found'], 404);
+        }
+    }
 }
