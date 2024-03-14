@@ -9,7 +9,7 @@ use Kirby\Cms\Response;
 use Kirby\Http\Remote;
 use Kirby\Toolkit\A;
 
-class PoisPage extends Page
+class PointOfInterestsPage extends Page
 {
     static $subpages = null;
 

@@ -7,7 +7,7 @@ use Kirby\Cms\Pages;
 use Kirby\Toolkit\A;
 use Kirby\Toolkit\Str;
 
-class PoiPage extends Page
+class PointOfInterestPage extends Page
 {
     // public function fases()
     // {
