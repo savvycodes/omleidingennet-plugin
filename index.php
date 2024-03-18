@@ -3,8 +3,8 @@
 F::loadClasses([
     'omleidingennet\\plugin\\token' => 'src/Token.php',
     'omleidingennet\\plugin\\detourspage' => 'src/models/Detours.php',
-    'omleidingennet\\plugin\\pointofinterestspage' => 'src/models/PointOfInterests.php',
     'omleidingennet\\plugin\\detourpage' => 'src/models/Detour.php',
+    'omleidingennet\\plugin\\pointofinterestspage' => 'src/models/PointOfInterests.php',
     'omleidingennet\\plugin\\pointofinterestpage' => 'src/models/PointOfInterest.php',
 ], __DIR__);
 
