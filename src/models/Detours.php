@@ -28,7 +28,7 @@ class DetoursPage extends Page
             return $this->children;
         }
 
-        $search = get('search');
+        $search = get('search_query');
         $status = get('detour_status');
         $areas = get('areas');
         $results = $this->detours($search, $status, $areas);
@@ -82,12 +82,6 @@ class DetoursPage extends Page
         $detours = $cache->get($cacheKey);
         // only serve from cache when $search, $status or $areas is not set
         if ($detours !== null && empty(isset($search))) {
-            $detours = array_values(A::filter($detours, function ($detour) use ($status) {
-                if (!$status) {
-                    return $detour['status'] != 'Afgerond';
-                }
-                return $detour['status'] == $status;
-            }));
             return $detours;
         }
 
@@ -216,19 +210,12 @@ GRAPHQL;
             $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
         }
 
-        $detours = array_values(A::filter($detours, function ($detour) use ($status) {
-            if (!$status) {
-                return $detour['status'] != 'Afgerond';
-            }
-            return $detour['status'] == $status;
-        }));
-
         return $detours;
     }
 
     public function apiDetours()
     {
-        $search = get('search');
+        $search = get('search_query');
         $status = get('detour_status');
         $areas = get('areas');
         $detours = $this->detours($search, $status, $areas);
