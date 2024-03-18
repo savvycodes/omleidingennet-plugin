@@ -28,7 +28,7 @@ class DetoursPage extends Page
             return $this->children;
         }
 
-        $search = get('search');
+        $search = get('search_query');
         $status = get('detour_status');
         $areas = get('areas');
         $results = $this->detours($search, $status, $areas);
@@ -214,7 +214,7 @@ GRAPHQL;
 
     public function apiDetours()
     {
-        $search = get('search');
+        $search = get('search_query');
         $status = get('detour_status');
         $areas = get('areas');
         $detours = $this->detours($search, $status, $areas);
