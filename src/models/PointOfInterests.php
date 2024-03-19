@@ -28,34 +28,25 @@ class PointOfInterestsPage extends Page
             return $this->children;
         }
 
-        $search = get('search');
+        $search = get('search_query');
         $results = $this->pois($search);
         $pages = [];
 
-        foreach ($results as $key => $detour) {
-            $slug = 'poi-' . $detour['id'];
+        foreach ($results as $key => $poi) {
 
             $pages[] = [
                 'num' => 0,
-                'slug' => $slug,
+                'slug' => $poi['id'], // no slug for now
                 'template' => 'point-of-interest',
                 'model' => 'PointOfInterest',
                 'content' => [
-                    'title' => $detour['name'],
-                    "description" => $detour['description'],
-                    'begin_date' => $detour['beginDate'],
-                    'end_date' => $detour['endDate'],
-                    // "detour_status" => $detour['status'],
-                    // "slug" => $detour['slug'],
-                    // "website" => $detour['website'],
-                    "cover" => $detour['coverPhoto'],
-                    // "type" => $detour['detourType'],
-                    // "fases" => $detour['fases'],
-                    // "infraManager" => isset($detour['infraManager']) ? $detour['infraManager'] : null,
-                    // 'uuid' => $detour['id'],
-                    // 'actions' => $page ? $page->actions()->value() : null,
-                    // 'employer' => $page ? $page->employer()->value() : null,
-                    // 'logistic' => $page ? $page->logistic()->value() : null,
+                    'title' => $poi['name'],
+                    "description" => $poi['description'],
+                    'begin_date' => $poi['beginDate'],
+                    'end_date' => $poi['endDate'],
+                    "cover" => $poi['coverPhoto'],
+                    "styling" => $poi['styling'],
+                    'uuid' => $poi['id'],
                 ],
             ];
         }
@@ -80,12 +71,6 @@ class PointOfInterestsPage extends Page
         $pois = $cache->get($cacheKey);
         // only serve from cache when $search, $status or $areas is not set
         if ($pois !== null && empty(isset($search))) {
-            // $pois = array_values(A::filter($pois, function ($poi) use ($status) {
-            //     if (!$status) {
-            //         return $poi['status'] != 'Afgerond';
-            //     }
-            //     return $poi['status'] == $status;
-            // }));
             return $pois;
         }
 
@@ -106,7 +91,9 @@ class PointOfInterestsPage extends Page
                 type {
                   id
                   name
+                  __typename
                 }
+                styling 
               }
               totalCount
             }
@@ -124,12 +111,6 @@ GRAPHQL;
         if (isset($search) && !empty($search)) {
             $filter['query'] = $search;
         }
-        // if (isset($status) && !empty($status)) {
-        //     $filter['status'] = $status;
-        // }
-        // if (isset($areas) && !empty($areas)) {
-        //     $filter['areas'] = [$areas];
-        // }
 
         // contiously fetch detours until totalCount is reached
         $arr = [];
@@ -172,39 +153,32 @@ GRAPHQL;
             $cache->set($cacheKey, $arr, option('omleidingennet.plugin.ttl'));
         }
 
-        // $arr = array_values(A::filter($arr, function ($detour) use ($status) {
-        //     if (!$status) {
-        //         return $detour['status'] != 'Afgerond';
-        //     }
-        //     return $detour['status'] == $status;
-        // }));
-
         return $arr;
     }
 
     public function apiPointOfInterests()
     {
-        $search = get('search');
+        $search = get('search_query');
         $pois = $this->pois($search);
 
         return Response::json(['pois' => $pois]);
     }
 
-    public function apiPointOfInterest($detourId)
+    public function apiPointOfInterest($id)
     {
-        $detours = $this->pois();
-        $requestedDetour = null;
-        foreach ($detours as $detour) {
-            if ($detour['id'] === $detourId) {
-                $requestedDetour = $detour;
+        $pois = $this->pois();
+        $requestedPoi = null;
+        foreach ($pois as $poi) {
+            if ($poi['id'] === $id) {
+                $requestedPoi = $poi;
                 break;
             }
         }
 
-        if ($requestedDetour !== null) {
-            return Response::json(['pois' => [$requestedDetour]]);
+        if ($requestedPoi !== null) {
+            return Response::json(['pois' => [$requestedPoi]]);
         } else {
-            return Response::json(['error' => 'Detour not found'], 404);
+            return Response::json(['error' => 'Point of Interest not found'], 404);
         }
     }
 }

@@ -13,7 +13,7 @@ Kirby::plugin('omleidingennet/plugin', [
         'pages/detours' => __DIR__ . '/blueprints/detours.yml',
         'pages/detour' => __DIR__ . '/blueprints/detour.yml',
         'pages/point-of-interests' => __DIR__ . '/blueprints/point-of-interests.yml',
-        'pages/point-of-interests' => __DIR__ . '/blueprints/point-of-interest.yml',
+        'pages/point-of-interest' => __DIR__ . '/blueprints/point-of-interest.yml',
     ],
     'pageModels' => [
         'detours' => 'omleidingennet\\plugin\\detourspage',
@@ -67,7 +67,7 @@ Kirby::plugin('omleidingennet/plugin', [
                     'slug' => 'pois',
                     'template' => 'pois',
                 ]);
-                return $poisPage->apiPointOfInterests($id);
+                return $poisPage->apiPointOfInterest($id);
             }
         ],
     ],

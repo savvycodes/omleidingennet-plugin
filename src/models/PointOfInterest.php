@@ -9,12 +9,6 @@ use Kirby\Toolkit\Str;
 
 class PointOfInterestPage extends Page
 {
-    // public function fases()
-    // {
-    //     $fases = A::get($this->content()->get('fases')->toArray(), 'fases');
-    //     return $fases;
-    // }
-
     public function cover()
     {
         return A::get($this->content()->get('cover')->toArray(), 'cover.url');
