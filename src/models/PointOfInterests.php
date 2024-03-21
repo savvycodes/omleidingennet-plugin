@@ -119,8 +119,8 @@ GRAPHQL;
         $arr = [];
         $skip = 0;
         $totalCount = 0;
-        // do {
-            // $filter['skip'] = $skip; 
+        do {
+            $filter['skip'] = $skip; 
             // there is no skip filter (yet)
             $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
                 'headers' => [
@@ -144,13 +144,13 @@ GRAPHQL;
 
                 $totalCount = $data['data']['pointOfInterests']['totalCount'];
                 $arr = array_merge($arr, $data['data']['pointOfInterests']['pois']);
-                // $skip += $take;
+                $skip += $take;
             } else {
                 // disabled for now to prevent site from crashing
                 // $data = $res->json_encode();
                 // throw new Exception($data, $res->code());
             }
-        // } while (count($arr) < $totalCount);
+        } while (count($arr) < $totalCount);
 
         // cache for ttl minutes
         if (empty($search)) {
