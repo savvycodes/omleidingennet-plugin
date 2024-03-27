@@ -46,7 +46,7 @@ class PointOfInterestsPage extends Page
                     'begin_date' => $poi['beginDate'],
                     'end_date' => $poi['endDate'],
                     "cover" => $poi['coverPhoto'],
-                    "styling" => $poi['styling'],
+                    "styling" => $poi['type']['styling'],
                     'uuid' => $poi['id'],
                 ],
             ];
@@ -92,9 +92,9 @@ class PointOfInterestsPage extends Page
                 type {
                   id
                   name
+                  styling
                   __typename
                 }
-                styling 
               }
               totalCount
             }
