@@ -136,7 +136,6 @@ query detours($organisationId: String!, $filter: DetoursFilter) {
           id
           name
           type
-          geometry
         }
         detourlines {
           id
