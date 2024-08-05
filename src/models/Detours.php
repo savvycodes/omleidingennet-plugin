@@ -7,7 +7,6 @@ use Kirby\Cms\Page;
 use Kirby\Cms\Pages;
 use Kirby\Cms\Response;
 use Kirby\Http\Remote;
-use Kirby\Toolkit\A;
 
 class DetoursPage extends Page
 {
@@ -22,7 +21,7 @@ class DetoursPage extends Page
         return static::$subpages = Pages::factory($this->inventory()['children'], $this);
     }
 
-    public function children()
+    public function children(): Pages
     {
         if ($this->children instanceof Pages) {
             return $this->children;
@@ -34,7 +33,7 @@ class DetoursPage extends Page
         $results = $this->detours($search, $status, $areas);
         $pages = [];
 
-        foreach ($results as $key => $detour) {
+        foreach ($results as $detour) {
             $slug = $detour['slug'];
             $page = $this->subpages()->find($slug);
 
@@ -190,7 +189,7 @@ GRAPHQL;
 
             if ($res->code() === 200) {
                 $data = $res->json();
-                
+
                 if (isset($data['error'])) {
                     throw new Exception($data['error']['message']);
                 }
@@ -299,7 +298,7 @@ GRAPHQL;
         $areas = $this->fetchAreas();
         $pages = [];
 
-        foreach ($areas as $key => $area) {
+        foreach ($areas as $area) {
             $slug = $area['id'];
             $page = $this->subpages()->find($slug);
 

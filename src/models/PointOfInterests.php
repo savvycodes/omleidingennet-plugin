@@ -22,7 +22,7 @@ class PointOfInterestsPage extends Page
         return static::$subpages = Pages::factory($this->inventory()['children'], $this);
     }
 
-    public function children()
+    public function children(): Pages
     {
         if ($this->children instanceof Pages) {
             return $this->children;
@@ -120,7 +120,7 @@ GRAPHQL;
         $skip = 0;
         $totalCount = 0;
         do {
-            $filter['skip'] = $skip; 
+            $filter['skip'] = $skip;
             // there is no skip filter (yet)
             $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
                 'headers' => [
@@ -223,31 +223,31 @@ GRAPHQL;
 
         $arr = [];
         $totalCount = 0;
-            $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
-                'headers' => [
-                    'Content-Type: application/json',
-                    'Authorization: Bearer ' . $token
-                ],
-                'data' => json_encode([
-                    'query' => $query,
-                    'variables' => [
-                        'organisationId' => option('omleidingennet.plugin.organisationId'),
-                    ]
-                ])
-            ]);
+        $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
+            'headers' => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $token
+            ],
+            'data' => json_encode([
+                'query' => $query,
+                'variables' => [
+                    'organisationId' => option('omleidingennet.plugin.organisationId'),
+                ]
+            ])
+        ]);
 
-            if ($res->code() === 200) {
-                $data = $res->json();
-                if (isset($data['error'])) {
-                    throw new Exception($data['error']['message']);
-                }
-
-                $arr = array_merge($arr, $data['data']['pointOfInterestTypes']);
-            } else {
-                // disabled for now to prevent site from crashing
-                // $data = $res->json_encode();
-                // throw new Exception($data, $res->code());
+        if ($res->code() === 200) {
+            $data = $res->json();
+            if (isset($data['error'])) {
+                throw new Exception($data['error']['message']);
             }
+
+            $arr = array_merge($arr, $data['data']['pointOfInterestTypes']);
+        } else {
+            // disabled for now to prevent site from crashing
+            // $data = $res->json_encode();
+            // throw new Exception($data, $res->code());
+        }
 
         // cache for ttl minutes
         if (empty($search)) {
@@ -260,7 +260,7 @@ GRAPHQL;
     public function getTypes()
     {
         $types = $this->types();
-        
+
         // filter out to only have the name and id
         $types = array_map(function ($type) {
             return [
