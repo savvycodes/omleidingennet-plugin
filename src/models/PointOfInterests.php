@@ -142,6 +142,10 @@ GRAPHQL;
                     throw new Exception($data['error']['message']);
                 }
 
+                if (isset($data['errors'])) {
+                    throw new Exception(json_encode($data['errors'][0]['message']));
+                }
+
                 $totalCount = $data['data']['pointOfInterests']['totalCount'];
                 $arr = array_merge($arr, $data['data']['pointOfInterests']['pois']);
                 $skip += $take;
