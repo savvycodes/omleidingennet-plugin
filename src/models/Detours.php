@@ -39,7 +39,7 @@ class DetoursPage extends Page
 
             $pages[] = [
                 'slug' => $detour['slug'],
-                'num' => $key + 1,
+                'num' => 0,
                 'template' => 'detour',
                 'model' => 'detour',
                 'files' => $page ? $page->files()->toArray() : null,
