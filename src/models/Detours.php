@@ -33,13 +33,13 @@ class DetoursPage extends Page
         $results = $this->detours($search, $status, $areas);
         $pages = [];
 
-        foreach ($results as $detour) {
+        foreach ($results as $key => $detour) {
             $slug = $detour['slug'];
             $page = $this->subpages()->find($slug);
 
             $pages[] = [
                 'slug' => $detour['slug'],
-                'num' => 0,
+                'num' => $key + 1,
                 'template' => 'detour',
                 'model' => 'detour',
                 'files' => $page ? $page->files()->toArray() : null,

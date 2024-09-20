@@ -7,7 +7,7 @@ use Kirby\Cms\Page;
 use Kirby\Cms\Pages;
 use Kirby\Cms\Response;
 use Kirby\Http\Remote;
-use Kirby\Toolkit\A;
+use Kirby\Toolkit\Str;
 
 class PointOfInterestsPage extends Page
 {
@@ -36,8 +36,8 @@ class PointOfInterestsPage extends Page
         foreach ($results as $key => $poi) {
 
             $pages[] = [
-                'num' => 0,
-                'slug' => $poi['id'], // no slug for now
+                'slug' => Str::slug($poi['name']),
+                'num' => $key + 1,
                 'template' => 'point-of-interest',
                 'model' => 'PointOfInterest',
                 'content' => [
