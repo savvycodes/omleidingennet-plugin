@@ -33,7 +33,7 @@ class DetoursPage extends Page
         $results = $this->detours($search, $status, $areas);
         $pages = [];
 
-        foreach ($results as $key => $detour) {
+        foreach ($results as $detour) {
             $slug = $detour['slug'];
             $page = $this->subpages()->find($slug);
 

@@ -33,8 +33,7 @@ class PointOfInterestsPage extends Page
         $results = $this->pois($search, $type);
         $pages = [];
 
-        foreach ($results => $poi) {
-
+        foreach ($results as $poi) {
             $pages[] = [
                 'slug' => Str::slug($poi['name']),
                 'num' => 0,
