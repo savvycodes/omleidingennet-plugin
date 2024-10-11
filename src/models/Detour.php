@@ -19,4 +19,27 @@ class DetourPage extends Page
     {
         return A::get($this->content()->get('cover')->toArray(), 'cover.url');
     }
+
+    public function orderByKey()
+    {
+        // Phase order (last to first)
+        $phaseOrder = ['Afgerond', 'Verwachte werkzaamheden', 'Op de planning', 'In uitvoering'];
+
+        $status = $this->detour_status();
+
+        $beginDate = null;
+
+        if ($fase = $this->fases()[0]) {
+            $beginDate = A::get($fase, 'beginDate');
+        } else {
+            $fases = $this->fases();
+            $beginDate = A::get($fases, '0.beginDate');
+        }
+
+        // Create a sort key combining phase order and date
+        $phaseIndex = array_search($status, $phaseOrder);
+        $dateKey = $beginDate ? strtotime($beginDate) : 0;
+
+        return $phaseIndex . '-' . $dateKey;
+    }
 }
