@@ -7,7 +7,7 @@ use Kirby\Cms\Page;
 use Kirby\Cms\Pages;
 use Kirby\Cms\Response;
 use Kirby\Http\Remote;
-use Kirby\Toolkit\A;
+use Kirby\Toolkit\Str;
 
 class PointOfInterestsPage extends Page
 {
@@ -33,11 +33,10 @@ class PointOfInterestsPage extends Page
         $results = $this->pois($search, $type);
         $pages = [];
 
-        foreach ($results as $key => $poi) {
-
+        foreach ($results as $poi) {
             $pages[] = [
+                'slug' => Str::slug($poi['name']),
                 'num' => 0,
-                'slug' => $poi['id'], // no slug for now
                 'template' => 'point-of-interest',
                 'model' => 'PointOfInterest',
                 'content' => [
@@ -140,6 +139,10 @@ GRAPHQL;
                 $data = $res->json();
                 if (isset($data['error'])) {
                     throw new Exception($data['error']['message']);
+                }
+
+                if (isset($data['errors'])) {
+                    throw new Exception(json_encode($data['errors'][0]['message']));
                 }
 
                 $totalCount = $data['data']['pointOfInterests']['totalCount'];

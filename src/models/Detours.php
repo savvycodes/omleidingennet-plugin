@@ -280,6 +280,9 @@ GRAPHQL;
             if (isset($data['error'])) {
                 throw new Exception($data['error']['message']);
             }
+            if (isset($data['errors'])) {
+                throw new Exception(json_encode($data['errors'][0]['message']));
+            }
 
             $areas = $data['data']['areas'];
 
