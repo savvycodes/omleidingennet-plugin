@@ -14,9 +14,4 @@ class DetourPage extends Page
         $fases = A::get($this->content()->get('fases')->toArray(), 'fases');
         return $fases;
     }
-
-    public function cover()
-    {
-        return A::get($this->content()->get('cover')->toArray(), 'cover.url');
-    }
 }

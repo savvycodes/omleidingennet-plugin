@@ -44,7 +44,7 @@ class PointOfInterestsPage extends Page
                     "description" => $poi['description'],
                     'begin_date' => $poi['beginDate'],
                     'end_date' => $poi['endDate'],
-                    "cover" => $poi['coverPhoto'],
+                    "cover" => $poi['coverPhoto'] ? $poi['coverPhoto']['url'] : null,
                     "styling" => $poi['type']['styling'],
                     'uuid' => $poi['id'],
                 ],
