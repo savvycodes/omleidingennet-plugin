@@ -1,5 +1,11 @@
 <?php
 
+use Kirby\Toolkit\Collection;
+use Kirby\Cms\App as Kirby;
+use Kirby\Filesystem\F;
+
+F::loadOnce(__DIR__ . '/src/Search.php');
+
 F::loadClasses([
     'omleidingennet\\plugin\\token' => 'src/Token.php',
     'omleidingennet\\plugin\\detourspage' => 'src/models/Detours.php',
@@ -71,5 +77,33 @@ Kirby::plugin('omleidingennet/plugin', [
             }
         ],
     ],
+    'components' => [
+        'search' => function (Kirby $kirby, Collection $collection, string $query = null, $params = []) {
 
+            // Only replace the search component for Pages collections
+            if (is_a($collection, 'Kirby\Cms\Pages') === true) {
+
+                // Separate detours from the rest of the collection
+                $nonDetours = $collection->filterBy('template', 'not in', ['detour']);
+                $detours = $collection->filterBy('template', 'in', ['detour']);
+
+                $nonDetoursResult = null;
+                $detoursResult = null;
+
+                // Perform the custom search on detours
+                if ($detours->isNotEmpty()) {
+                    $detoursResult = \Omleidingennet\Plugin\searchDetours($detours, $query, $params);
+                }
+
+                // Perform the native search on the rest of the collection
+                $nonDetoursResult = $kirby->nativeComponent('search')($kirby, $nonDetours, $query, $params);
+
+                // Merge the results and return them
+                return $detoursResult->merge($nonDetoursResult);
+            }
+
+            // Use the native component for other searches (users, files, etc.)
+            return $kirby->nativeComponent('search')($kirby, $collection, $query, $params);
+        }
+    ]
 ]);

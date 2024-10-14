@@ -15,11 +15,6 @@ class DetourPage extends Page
         return $fases;
     }
 
-    public function cover()
-    {
-        return A::get($this->content()->get('cover')->toArray(), 'cover.url');
-    }
-
     public function orderByKey()
     {
         // Phase order (last to first)
