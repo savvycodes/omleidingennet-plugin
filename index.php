@@ -98,8 +98,14 @@ Kirby::plugin('omleidingennet/plugin', [
                 // Perform the native search on the rest of the collection
                 $nonDetoursResult = $kirby->nativeComponent('search')($kirby, $nonDetours, $query, $params);
 
-                // Merge the results and return them
-                return $detoursResult->merge($nonDetoursResult);
+                // Return the non-null result or merge if both are non-null
+                if ($detoursResult === null) {
+                    return $nonDetoursResult;
+                } elseif ($nonDetoursResult === null) {
+                    return $detoursResult;
+                } else {
+                    return $detoursResult->merge($nonDetoursResult);
+                }
             }
 
             // Use the native component for other searches (users, files, etc.)
