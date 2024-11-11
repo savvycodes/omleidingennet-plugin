@@ -44,41 +44,75 @@ class DetourPage extends Page
         $end = null;
 
         if ($fase) {
-            $start = A::get($fase, 'beginDate');
-            $end = A::get($fase, 'endDate');
+            $start = A::get($fase, 'beginDateAlternative');
+            if (empty($start)) {
+                $start = A::get($fase, 'beginDate') ? new \DateTime(A::get($fase, 'beginDate'), new \DateTimeZone('Europe/Amsterdam')) : null;
+                $start = $start->format('j-m-Y');
+            }
+
+            $end = A::get($fase, 'endDateAlternative');
+            if (empty($end)) {
+                $end = A::get($fase, 'endDate') ? new \DateTime(A::get($fase, 'endDate'), new \DateTimeZone('Europe/Amsterdam')) : null;
+                $end = $end->format('j-m-Y');
+            }
         } else {
             $fases = $this->fases();
 
-            $start = A::get($fases, '0.beginDate');
-            $end = A::get(A::last($fases), 'endDate');
-        }
-
-        // Convert UTC dates to local timezone
-        $timezone = new \DateTimeZone('Europe/Amsterdam');
-        $startDateTime = $start ? new \DateTime($start, new \DateTimeZone('UTC')) : null;
-        $endDateTime = $end ? new \DateTime($end, new \DateTimeZone('UTC')) : null;
-
-        if ($startDateTime) {
-            $startDateTime->setTimezone($timezone);
-        }
-        if ($endDateTime) {
-            $endDateTime->setTimezone($timezone);
+            $start = A::get($fases, '0.beginDateAlternative');
+            if (empty($start)) {
+                $start = A::get($fases, '0.beginDate') ? new \DateTime(A::get($fases, '0.beginDate'), new \DateTimeZone('Europe/Amsterdam')) : null;
+                $start = $start->format('j-m-Y');
+            }
+            $end = A::get(A::last($fases), 'endDateAlternative');
+            if (empty($end)) {
+                $end = A::get(A::last($fases), 'endDate') ? new \DateTime(A::get(A::last($fases), 'endDate'), new \DateTimeZone('Europe/Amsterdam')) : null;
+                $end = $end->format('j-m-Y');
+            }
         }
 
         // if start, but no end, return start
-        if (!empty($startDateTime) && empty($endDateTime)) {
-            return $startDateTime->format('j-m-Y');
+        if (!empty($start) && empty($end)) {
+            return $start;
         }
 
-        if (empty($startDateTime) || empty($endDateTime)) {
+        if (empty($start) || empty($end)) {
             return 'Nader te bepalen datum';
         }
 
         // if start and end are the same day, return start
-        if ($startDateTime->format('j-m-Y') === $endDateTime->format('j-m-Y')) {
-            return $startDateTime->format('j-m-Y');
+        if ($start === $end) {
+            return $start;
         }
 
-        return $startDateTime->format('j-m-Y') . ' t/m ' . $endDateTime->format('j-m-Y');
+        return $start . ' t/m ' . $end;
+    }
+
+    public function startDate()
+    {
+        $first_fase = A::first($this->fases());
+        if (empty($first_fase['beginDateAlternative']) && empty($first_fase['beginDate'])) {
+            return null;
+        }
+
+        if (!empty($first_fase['beginDateAlternative'])) {
+            return $first_fase['beginDateAlternative'];
+        }
+
+        return date('j-m-Y', strtotime($first_fase['beginDate']));
+    }
+
+    public function endDate()
+    {
+        $fase = A::last($this->fases());
+
+        if (empty($fase['endDateAlternative']) && empty($fase['endDate'])) {
+            return null;
+        }
+
+        if (!empty($fase['endDateAlternative'])) {
+            return $fase['endDateAlternative'];
+        }
+
+        return date('j-m-Y', strtotime($fase['endDate']));
     }
 }
