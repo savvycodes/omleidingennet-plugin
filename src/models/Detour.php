@@ -45,28 +45,28 @@ class DetourPage extends Page
 
         if ($fase) {
             $start = A::get($fase, 'beginDateAlternative');
-            if (empty($start)) {
+            if (!$start) {
                 $start = A::get($fase, 'beginDate') ? new \DateTime(A::get($fase, 'beginDate'), new \DateTimeZone('Europe/Amsterdam')) : null;
-                $start = $start->format('j-m-Y');
+                $start = $start ? $start->format('j-m-Y') : null;
             }
 
             $end = A::get($fase, 'endDateAlternative');
-            if (empty($end)) {
+            if (!$end) {
                 $end = A::get($fase, 'endDate') ? new \DateTime(A::get($fase, 'endDate'), new \DateTimeZone('Europe/Amsterdam')) : null;
-                $end = $end->format('j-m-Y');
+                $end = $end ? $end->format('j-m-Y') : null;
             }
         } else {
             $fases = $this->fases();
 
             $start = A::get($fases, '0.beginDateAlternative');
-            if (empty($start)) {
+            if (!$start) {
                 $start = A::get($fases, '0.beginDate') ? new \DateTime(A::get($fases, '0.beginDate'), new \DateTimeZone('Europe/Amsterdam')) : null;
-                $start = $start->format('j-m-Y');
+                $start = $start ? $start->format('j-m-Y') : null;
             }
             $end = A::get(A::last($fases), 'endDateAlternative');
-            if (empty($end)) {
+            if (!$end) {
                 $end = A::get(A::last($fases), 'endDate') ? new \DateTime(A::get(A::last($fases), 'endDate'), new \DateTimeZone('Europe/Amsterdam')) : null;
-                $end = $end->format('j-m-Y');
+                $end = $end ? $end->format('j-m-Y') : null;
             }
         }
 
