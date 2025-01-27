@@ -71,6 +71,7 @@ class DetoursPage extends Page
     private function detours($search = null, $status = null, $areas = null)
     {
         $cache = kirby()->cache('omleidingennet.plugin');
+        $backupCache = kirby()->cache('backup.omleidingennet.plugin');
         $hashKey = (empty($status) ? '' :  $status) . (empty($areas) ? '' : $areas);
         $hash = hash('sha256', $hashKey);
 
@@ -207,6 +208,7 @@ GRAPHQL;
         // cache for ttl minutes
         if (empty($search)) {
             $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
+            $backupCache->set($cacheKey, $detours); // no timout for backup cache
         }
 
         return $detours;
