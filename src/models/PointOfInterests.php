@@ -62,11 +62,14 @@ class PointOfInterestsPage extends Page
     private function pois($search = null, $type = null)
     {
         $cache = kirby()->cache('omleidingennet.plugin');
+        $backupCache = kirby()->cache('backup.omleidingennet.plugin');
+
         $hashKey = (empty($status) ? '' :  $status) . (empty($areas) ? '' : $areas);
         $hash = hash('sha256', $hashKey);
 
         // create sha256 of status and areas
         $cacheKey = "pois." . $hash . option('omleidingennet.plugin.organisationId');
+        $backupCacheKey = "backup.pois." . $hash . option('omleidingennet.plugin.organisationId');
 
         $pois = $cache->get($cacheKey);
         // only serve from cache when $search, $status or $areas is not set
@@ -118,46 +121,56 @@ GRAPHQL;
         $arr = [];
         $skip = 0;
         $totalCount = 0;
-        do {
-            $filter['skip'] = $skip;
-            // there is no skip filter (yet)
-            $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
-                'headers' => [
-                    'Content-Type: application/json',
-                    'Authorization: Bearer ' . $token
-                ],
-                'data' => json_encode([
-                    'query' => $query,
-                    'variables' => [
-                        'organisationId' => option('omleidingennet.plugin.organisationId'),
-                        'filter' => $filter
-                    ]
-                ])
-            ]);
+        try {
+            do {
+                $filter['skip'] = $skip;
+                // there is no skip filter (yet)
+                $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
+                    'headers' => [
+                        'Content-Type: application/json',
+                        'Authorization: Bearer ' . $token
+                    ],
+                    'data' => json_encode([
+                        'query' => $query,
+                        'variables' => [
+                            'organisationId' => option('omleidingennet.plugin.organisationId'),
+                            'filter' => $filter
+                        ]
+                    ])
+                ]);
 
-            if ($res->code() === 200) {
-                $data = $res->json();
-                if (isset($data['error'])) {
-                    throw new Exception($data['error']['message']);
+                if ($res->code() === 200) {
+                    $data = $res->json();
+                    if (isset($data['error'])) {
+                        throw new Exception($data['error']['message']);
+                    }
+
+                    if (isset($data['errors'])) {
+                        throw new Exception(json_encode($data['errors'][0]['message']));
+                    }
+
+                    $totalCount = $data['data']['pointOfInterests']['totalCount'];
+                    $arr = array_merge($arr, $data['data']['pointOfInterests']['pois']);
+                    $skip += $take;
+                } else {
+                    throw new Exception('Could not fetch detours: ' . $res->code());
                 }
+            } while (count($arr) < $totalCount);
+        } catch (Exception $e) {
+            \Sentry\captureException($e);
 
-                if (isset($data['errors'])) {
-                    throw new Exception(json_encode($data['errors'][0]['message']));
-                }
-
-                $totalCount = $data['data']['pointOfInterests']['totalCount'];
-                $arr = array_merge($arr, $data['data']['pointOfInterests']['pois']);
-                $skip += $take;
-            } else {
-                // disabled for now to prevent site from crashing
-                // $data = $res->json_encode();
-                // throw new Exception($data, $res->code());
+            // Fallback to backup cache if request fails
+            $backupDetours = $backupCache->get($backupCacheKey);
+            if ($backupDetours !== null) {
+                return $backupDetours;
             }
-        } while (count($arr) < $totalCount);
+        }
 
         // cache for ttl minutes
         if (empty($search)) {
             $cache->set($cacheKey, $arr, option('omleidingennet.plugin.ttl'));
+            $backupCache->set($backupCacheKey, $arr); // no timout for backup cache
+
         }
 
         return $arr;
