@@ -7,6 +7,7 @@ use Kirby\Cms\Page;
 use Kirby\Cms\Pages;
 use Kirby\Cms\Response;
 use Kirby\Http\Remote;
+use Sentry;
 
 class DetoursPage extends Page
 {
@@ -176,37 +177,46 @@ GRAPHQL;
         $detours = [];
         $skip = 0;
         $totalCount = 0;
-        do {
-            $filter['skip'] = $skip;
-            $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
-                'headers' => [
-                    'Content-Type: application/json',
-                    'Authorization: Bearer ' . $token
-                ],
-                'data' => json_encode([
-                    'query' => $query,
-                    'variables' => [
-                        'organisationId' => option('omleidingennet.plugin.organisationId'),
-                        'filter' => $filter
-                    ]
-                ])
-            ]);
+        try {
+            do {
+                $filter['skip'] = $skip;
+                $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
+                    'headers' => [
+                        'Content-Type: application/json',
+                        'Authorization: Bearer ' . $token
+                    ],
+                    'data' => json_encode([
+                        'query' => $query,
+                        'variables' => [
+                            'organisationId' => option('omleidingennet.plugin.organisationId'),
+                            'filter' => $filter
+                        ]
+                    ])
+                ]);
 
-            if ($res->code() === 200) {
-                $data = $res->json();
+                if ($res->code() === 200) {
+                    $data = $res->json();
 
-                if (isset($data['error'])) {
-                    throw new Exception($data['error']['message']);
+                    if (isset($data['error'])) {
+                        throw new Exception($data['error']['message']);
+                    }
+
+                    $totalCount = $data['data']['detours']['totalCount'];
+                    $detours = array_merge($detours, $data['data']['detours']['detours']);
+                    $skip += $take;
+                } else {
+                    throw new Exception('Could not fetch detours: ' . $res->code());
                 }
+            } while (count($detours) < $totalCount);
+        } catch (Exception $e) {
+            \Sentry\captureException($e);
 
-                $totalCount = $data['data']['detours']['totalCount'];
-                $detours = array_merge($detours, $data['data']['detours']['detours']);
-                $skip += $take;
-            } else {
-                // disabled for now to prevent site from crashing
-                // throw new Exception('Could not fetch detours');
+            // Fallback to backup cache if request fails
+            $backupDetours = $backupCache->get($backupCacheKey);
+            if ($backupDetours !== null) {
+                return $backupDetours;
             }
-        } while (count($detours) < $totalCount);
+        }
 
         // cache for ttl minutes
         if (empty($search)) {
