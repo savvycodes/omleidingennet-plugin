@@ -62,11 +62,14 @@ class PointOfInterestsPage extends Page
     private function pois($search = null, $type = null)
     {
         $cache = kirby()->cache('omleidingennet.plugin');
+        $backupCache = kirby()->cache('backup.omleidingennet.plugin');
+
         $hashKey = (empty($status) ? '' :  $status) . (empty($areas) ? '' : $areas);
         $hash = hash('sha256', $hashKey);
 
         // create sha256 of status and areas
         $cacheKey = "pois." . $hash . option('omleidingennet.plugin.organisationId');
+        $backupCacheKey = "backup.pois." . $hash . option('omleidingennet.plugin.organisationId');
 
         $pois = $cache->get($cacheKey);
         // only serve from cache when $search, $status or $areas is not set
@@ -158,6 +161,8 @@ GRAPHQL;
         // cache for ttl minutes
         if (empty($search)) {
             $cache->set($cacheKey, $arr, option('omleidingennet.plugin.ttl'));
+            $backupCache->set($backupCacheKey, $arr); // no timout for backup cache
+
         }
 
         return $arr;

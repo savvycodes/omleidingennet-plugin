@@ -72,11 +72,14 @@ class DetoursPage extends Page
     {
         $cache = kirby()->cache('omleidingennet.plugin');
         $backupCache = kirby()->cache('backup.omleidingennet.plugin');
+
         $hashKey = (empty($status) ? '' :  $status) . (empty($areas) ? '' : $areas);
         $hash = hash('sha256', $hashKey);
 
         // create sha256 of status and areas
         $cacheKey = "detours." . $hash . option('omleidingennet.plugin.organisationId');
+        $backupCacheKey = "backup.detours." . $hash . option('omleidingennet.plugin.organisationId');
+
 
         $detours = $cache->get($cacheKey);
         // only serve from cache when $search, $status or $areas is not set
@@ -208,7 +211,7 @@ GRAPHQL;
         // cache for ttl minutes
         if (empty($search)) {
             $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
-            $backupCache->set($cacheKey, $detours); // no timout for backup cache
+            $backupCache->set($backupCacheKey, $detours); // no timout for backup cache
         }
 
         return $detours;
