@@ -8,6 +8,7 @@ use Kirby\Cms\Pages;
 use Kirby\Cms\Response;
 use Kirby\Http\Remote;
 use Sentry;
+use Kirby\Toolkit\A;
 
 class DetoursPage extends Page
 {
@@ -45,6 +46,7 @@ class DetoursPage extends Page
                 'model' => 'detour',
                 'files' => $page ? $page->files()->toArray() : null,
                 'content' => [
+                    "active_fase" => $this->activeFase($detour['fases']),
                     'title' => $detour['name'],
                     "description" => $detour['description'],
                     "detour_status" => $detour['status'],
@@ -234,6 +236,11 @@ GRAPHQL;
         $areas = get('areas');
         $detours = $this->detours($search, $status, $areas);
 
+        foreach ($detours as &$detour) {
+            $detour['activeFase'] = $this->activeFase($detour['fases']);
+            $detour['period'] = $this->period($detour);
+        }
+
         return Response::json(['detours' => $detours]);
     }
 
@@ -337,5 +344,25 @@ GRAPHQL;
         }
 
         return Pages::factory($pages, $this);
+    }
+
+    private function activeFase($fases)
+    {
+        foreach ($fases as $fase) {
+            if ($fase['status'] === 'In uitvoering') {
+                $fase['label'] = 'Huidige fase';
+                return $fase;
+            } else if ($fase['status'] === 'Op de planning') {
+                $fase['label'] = 'Eerstvolgende fase';
+                return $fase;
+            }
+        }
+    }
+
+    // reuse period function from Detour model, in the future we might want to move it here
+    private function period($detour)
+    {
+        $page = $this->children()->find($detour['slug']);
+        return $page ? $page->period() : '';
     }
 }
