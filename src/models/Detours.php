@@ -348,15 +348,19 @@ GRAPHQL;
 
     private function activeFase($fases)
     {
+        $selected = null;
         foreach ($fases as $fase) {
             if ($fase['status'] === 'In uitvoering') {
                 $fase['label'] = 'Huidige fase';
-                return $fase;
+                $selected = $fase;
+                break;
             } else if ($fase['status'] === 'Op de planning') {
                 $fase['label'] = 'Eerstvolgende fase';
-                return $fase;
+                $selected = $fase;
+                break;
             }
         }
+        return $selected;
     }
 
     // reuse period function from Detour model, in the future we might want to move it here
