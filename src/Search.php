@@ -12,6 +12,10 @@ function searchDetours(
     string|null $query = null,
     string|array $params = []
 ): Collection {
+    if (is_string($params) === true) {
+        $params = ['fields' => Str::split($params, '|')];
+    }
+
     $defaults = [
         'fields'    => [],
         'minlength' => 2,

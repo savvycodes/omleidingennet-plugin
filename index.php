@@ -84,8 +84,8 @@ Kirby::plugin('omleidingennet/plugin', [
             if (is_a($collection, 'Kirby\Cms\Pages') === true) {
 
                 // Separate detours from the rest of the collection
-                $nonDetours = $collection->filterBy('template', 'not in', ['detour']);
-                $detours = $collection->filterBy('template', 'in', ['detour']);
+                $nonDetours = $collection->filterBy('template', '!=', 'detour');
+                $detours = $collection->filterBy('template', '==', 'detour');
 
                 $nonDetoursResult = null;
                 $detoursResult = null;
@@ -93,18 +93,22 @@ Kirby::plugin('omleidingennet/plugin', [
                 // Perform the custom search on detours
                 if ($detours->isNotEmpty()) {
                     $detoursResult = \Omleidingennet\Plugin\searchDetours($detours, $query, $params);
+                    // $detoursResult = $detours->search($query, $params);
                 }
 
                 // Perform the native search on the rest of the collection
                 $nonDetoursResult = $kirby->nativeComponent('search')($kirby, $nonDetours, $query, $params);
 
                 // Return the non-null result or merge if both are non-null
-                if ($detoursResult === null) {
-                    return $nonDetoursResult;
-                } elseif ($nonDetoursResult === null) {
-                    return $detoursResult;
-                } else {
+                if ($detoursResult && $nonDetoursResult) {
+                    // Ensure both are objects that have the merge method
                     return $detoursResult->merge($nonDetoursResult);
+                } elseif ($detoursResult) {
+                    return $detoursResult;
+                } elseif ($nonDetoursResult) {
+                    return $nonDetoursResult;
+                } else {
+                    return null; // If both are null, return null
                 }
             }
 
