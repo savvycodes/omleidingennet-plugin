@@ -93,7 +93,6 @@ Kirby::plugin('omleidingennet/plugin', [
                 // Perform the custom search on detours
                 if ($detours->isNotEmpty()) {
                     $detoursResult = \Omleidingennet\Plugin\searchDetours($detours, $query, $params);
-                    // $detoursResult = $detours->search($query, $params);
                 }
 
                 // Perform the native search on the rest of the collection
