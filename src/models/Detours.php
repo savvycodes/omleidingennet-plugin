@@ -49,6 +49,7 @@ class DetoursPage extends Page
                 'content' =>  A::append(
                     $content,
                     [
+                        "active_fase" => $this->activeFase($detour['fases']),
                         'title' => $detour['name'],
                         "description" => $detour['description'],
                         "detour_status" => $detour['status'],
@@ -58,9 +59,6 @@ class DetoursPage extends Page
                         "fases" => $detour['fases'],
                         "infraManager" => isset($detour['infraManager']) ? $detour['infraManager'] : null,
                         'uuid' => $detour['id'],
-                        'actions' => $page ? $page->actions()->value() : null,
-                        'employer' => $page ? $page->employer()->value() : null,
-                        'logistic' => $page ? $page->logistic()->value() : null,
                     ]
                 ),
             ];
