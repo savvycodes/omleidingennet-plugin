@@ -15,6 +15,11 @@ class DetourPage extends Page
         return $fases;
     }
 
+    public function activeFase()
+    {
+        return $this->active_fase()->value();
+    }
+
     public function orderByKey()
     {
         // Phase order (last to first)
