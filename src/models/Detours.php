@@ -7,6 +7,7 @@ use Kirby\Cms\Page;
 use Kirby\Cms\Pages;
 use Kirby\Cms\Response;
 use Kirby\Http\Remote;
+use Kirby\Toolkit\A;
 
 class DetoursPage extends Page
 {
@@ -36,6 +37,7 @@ class DetoursPage extends Page
         foreach ($results as $detour) {
             $slug = $detour['slug'];
             $page = $this->subpages()->find($slug);
+            $content = $page ? $page->content()->toArray() : [];
 
             $pages[] = [
                 'slug' => $detour['slug'],
@@ -43,20 +45,20 @@ class DetoursPage extends Page
                 'template' => 'detour',
                 'model' => 'detour',
                 'files' => $page ? $page->files()->toArray() : null,
-                'content' => [
-                    'title' => $detour['name'],
-                    "description" => $detour['description'],
-                    "detour_status" => $detour['status'],
-                    "slug" => $detour['slug'],
-                    "website" => $detour['website'],
-                    "cover" => $detour['coverPhoto'] ? $detour['coverPhoto']['url'] : null,
-                    "fases" => $detour['fases'],
-                    "infraManager" => isset($detour['infraManager']) ? $detour['infraManager'] : null,
-                    'uuid' => $detour['id'],
-                    'actions' => $page ? $page->actions()->value() : null,
-                    'employer' => $page ? $page->employer()->value() : null,
-                    'logistic' => $page ? $page->logistic()->value() : null,
-                ],
+                'content' => A::append(
+                    $content,
+                    [
+                        'title' => $detour['name'],
+                        "description" => $detour['description'],
+                        "detour_status" => $detour['status'],
+                        "slug" => $detour['slug'],
+                        "website" => $detour['website'],
+                        "cover" => $detour['coverPhoto'] ? $detour['coverPhoto']['url'] : null,
+                        "fases" => $detour['fases'],
+                        "infraManager" => isset($detour['infraManager']) ? $detour['infraManager'] : null,
+                        'uuid' => $detour['id'],
+                    ],
+                ),
             ];
         }
 
