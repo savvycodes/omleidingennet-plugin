@@ -48,7 +48,8 @@ class Organisation
                 throw new Exception($data['error']['message']);
             }
             if (isset($data['errors'])) {
-                throw new Exception(json_encode($data['errors'][0]['message']));
+                $errorMessages = array_map(fn($error) => $error['message'], $data['errors']);
+                throw new Exception(json_encode($errorMessages));
             }
 
             $organisation = $data['data']['organisation'];
