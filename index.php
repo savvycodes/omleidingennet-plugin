@@ -12,6 +12,7 @@ F::loadClasses([
     'omleidingennet\\plugin\\detourpage' => 'src/models/Detour.php',
     'omleidingennet\\plugin\\pointofinterestspage' => 'src/models/PointOfInterests.php',
     'omleidingennet\\plugin\\pointofinterestpage' => 'src/models/PointOfInterest.php',
+    'omleidingennet\\plugin\\organisation' => 'src/Organisation.php',
 ], __DIR__);
 
 Kirby::plugin('omleidingennet/plugin', [
@@ -74,6 +75,14 @@ Kirby::plugin('omleidingennet/plugin', [
                     'template' => 'pois',
                 ]);
                 return $poisPage->apiPointOfInterest($id);
+            }
+        ],
+        [
+            'pattern' => 'omleidingennet/organisation',
+            'action' => function () {
+
+                $organisation = new \Omleidingennet\Plugin\Organisation();
+                return $organisation->apiOrganisation();
             }
         ],
     ],

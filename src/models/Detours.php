@@ -221,6 +221,13 @@ GRAPHQL;
             }
         }
 
+        // if filter is not set, filter out detours with status 'Afgerond'
+        if (empty($status) || $status === '') {
+            $detours = array_values(array_filter($detours, function ($detour) {
+                return $detour['status'] !== 'Afgerond';
+            }));
+        }
+
         // cache for ttl minutes
         if (empty($search)) {
             $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
