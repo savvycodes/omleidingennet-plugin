@@ -34,16 +34,20 @@ class PointOfInterestsPage extends Page
         $pages = [];
 
         foreach ($results as $poi) {
+            $slug = Str::slug($poi['name']);
+            $page = $this->subpages()->find($slug);
             $pages[] = [
-                'slug' => Str::slug($poi['name']),
+                'slug' => $slug,
                 'num' => 0,
                 'template' => 'point-of-interest',
                 'model' => 'PointOfInterest',
+                'files' => $page ? $page->files()->toArray() : null,
                 'content' => [
                     'title' => $poi['name'],
                     "description" => $poi['description'],
                     'begin_date' => $poi['beginDate'],
                     'end_date' => $poi['endDate'],
+                    'slug' => $slug,
                     "cover" => $poi['coverPhoto'] ? $poi['coverPhoto']['url'] : null,
                     "styling" => $poi['type']['styling'],
                     'uuid' => $poi['id'],
@@ -160,9 +164,9 @@ GRAPHQL;
             \Sentry\captureException($e);
 
             // Fallback to backup cache if request fails
-            $backupDetours = $backupCache->get($backupCacheKey);
-            if ($backupDetours !== null) {
-                return $backupDetours;
+            $backupPois = $backupCache->get($backupCacheKey);
+            if ($backupPois !== null) {
+                return $backupPois;
             }
         }
 
@@ -180,6 +184,10 @@ GRAPHQL;
     {
         $search = get('search_query');
         $pois = $this->pois($search);
+
+        foreach ($pois as &$poi) {
+            $poi['slug'] = Str::slug($poi['name']);
+        }
 
         return Response::json(['pois' => $pois]);
     }
