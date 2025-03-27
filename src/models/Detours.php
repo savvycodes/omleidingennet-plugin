@@ -72,7 +72,7 @@ class DetoursPage extends Page
         return Token::get();
     }
 
-    private function detours($search = null, $status = null, $areas = null, $showAll = false)
+    private function detours($search = null, $status = null, $areas = null, $hideCompleted = false)
     {
         $cache = kirby()->cache('omleidingennet.plugin');
         $backupCache = kirby()->cache('backup.omleidingennet.plugin');
@@ -222,7 +222,7 @@ GRAPHQL;
         }
 
         // if filter is not set and showAll == false, filter out detours with status 'Afgerond'
-        if (empty($status) || $status === '' && !$showAll) {
+        if ((empty($status) || $status === '') && $hideCompleted) {
             $detours = array_values(array_filter($detours, function ($detour) {
                 return $detour['status'] !== 'Afgerond';
             }));
@@ -242,7 +242,7 @@ GRAPHQL;
         $search = get('search_query');
         $status = get('detour_status');
         $areas = get('areas');
-        $detours = $this->detours($search, $status, $areas);
+        $detours = $this->detours($search, $status, $areas, true);
 
         foreach ($detours as &$detour) {
             $detour['activeFase'] = $this->activeFase($detour['fases']);
@@ -254,7 +254,7 @@ GRAPHQL;
 
     public function apiDetour($detourId)
     {
-        $detours = $this->detours(showAll: true);
+        $detours = $this->detours();
         $requestedDetour = null;
         foreach ($detours as $detour) {
             if ($detour['id'] === $detourId) {
