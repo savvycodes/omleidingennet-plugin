@@ -41,7 +41,7 @@ class DetoursPage extends Page
             $content = $page ? $page->content()->toArray() : [];
 
             $pages[] = [
-                'slug' => $detour['slug'],
+                'slug' => $slug,
                 'num' => 0,
                 'template' => 'detour',
                 'model' => 'detour',
@@ -52,8 +52,9 @@ class DetoursPage extends Page
                         "active_fase" => $this->activeFase($detour['fases']),
                         'title' => $detour['name'],
                         "description" => $detour['description'],
-                        "detour_status" => $detour['status'],
-                        "slug" => $detour['slug'],
+                        "current_status" => $detour['status'],
+                        "detour_type" => $detour['detourType']['name'],
+                        "slug" => $slug,
                         "website" => $detour['website'],
                         "cover" => $detour['coverPhoto'] ? $detour['coverPhoto']['url'] : null,
                         "fases" => $detour['fases'],
@@ -247,6 +248,9 @@ GRAPHQL;
         foreach ($detours as &$detour) {
             $detour['activeFase'] = $this->activeFase($detour['fases']);
             $detour['period'] = $this->period($detour);
+            $detour['startDate'] = $this->startDate($detour);
+            $detour['endDate'] = $this->endDate($detour);
+            $detour['areas'] = $this->allAreas($detour);
         }
 
         return Response::json(['detours' => $detours]);
@@ -371,10 +375,28 @@ GRAPHQL;
         return $selected;
     }
 
-    // reuse period function from Detour model, in the future we might want to move it here
+    // reuse period functions from Detour model
     private function period($detour)
     {
         $page = $this->children()->find($detour['slug']);
         return $page ? $page->period() : '';
+    }
+
+    private function startDate($detour)
+    {
+        $page = $this->children()->find($detour['slug']);
+        return $page ? $page->startDate() : '';
+    }
+
+    private function endDate($detour)
+    {
+        $page = $this->children()->find($detour['slug']);
+        return $page ? $page->endDate() : '';
+    }
+
+    private function allAreas($detour)
+    {
+        $page = $this->children()->find($detour['slug']);
+        return $page ? $page->areas() : '';
     }
 }

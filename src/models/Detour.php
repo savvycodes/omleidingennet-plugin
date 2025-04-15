@@ -25,7 +25,7 @@ class DetourPage extends Page
         // Phase order (last to first)
         $phaseOrder = ['Afgerond', 'Verwachte werkzaamheden', 'Op de planning', 'In uitvoering'];
 
-        $status = $this->detour_status();
+        $status = $this->current_status();
 
         $beginDate = null;
 
