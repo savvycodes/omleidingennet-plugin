@@ -41,7 +41,7 @@ class DetoursPage extends Page
             $content = $page ? $page->content()->toArray() : [];
 
             $pages[] = [
-                'slug' => $detour['slug'],
+                'slug' => $slug,
                 'num' => 0,
                 'template' => 'detour',
                 'model' => 'detour',
@@ -52,9 +52,9 @@ class DetoursPage extends Page
                         "active_fase" => $this->activeFase($detour['fases']),
                         'title' => $detour['name'],
                         "description" => $detour['description'],
-                        "detour_status" => $detour['status'],
+                        "current_status" => $detour['status'],
                         "detour_type" => $detour['detourType']['name'],
-                        "slug" => $detour['slug'],
+                        "slug" => $slug,
                         "website" => $detour['website'],
                         "cover" => $detour['coverPhoto'] ? $detour['coverPhoto']['url'] : null,
                         "fases" => $detour['fases'],
