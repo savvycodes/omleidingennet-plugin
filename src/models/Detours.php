@@ -85,17 +85,14 @@ class DetoursPage extends Page
         $cacheKey = "detours." . $hash . option('omleidingennet.plugin.organisationId');
         $backupCacheKey = "backup.detours." . $hash . option('omleidingennet.plugin.organisationId');
 
-        // 1) Try primary cache
+        // Try primary cache (This will automatically empty after ttl)
         $detoursCached = $cache->get($cacheKey);
 
-        // 2) If primary cache is still set, return it right away
+        // If primary cache is still set, return it right away
         if ($detoursCached !== null && empty(isset($search))) {
             return $detoursCached;
-        }
-
-        // 2) If primary cache is gone (or expired) try fetching new detours
-        if ($detoursCached === null) {
-
+        } else {
+            // If primary cache is gone (or expired) try fetching new detours
             $query = <<<'GRAPHQL'
 query detours($organisationId: String!, $filter: DetoursFilter) {
   detours(organisationId: $organisationId, filter:$filter) {
@@ -227,8 +224,8 @@ GRAPHQL;
                 }));
             }
 
-            // 3) If we have results and search is empty, cache them
-            if (empty($search) && !empty($detours)) {
+            // If we have results and search is empty, cache them
+            if (empty($search) && $detours !== null) {
                 // Set primary so the TTL restarts
                 $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
                 // Set backup cache without TTL
@@ -236,7 +233,7 @@ GRAPHQL;
 
                 // Return the detours
                 return $detours;
-            } else {
+            } elseif (empty($search) && $detours === null) {
                 // If no detours are found, use the backup cache
                 $backupDetours = $backupCache->get($backupCacheKey);
 
@@ -245,6 +242,9 @@ GRAPHQL;
 
                 // Return the backup detours
                 return $backupDetours;
+            } else {
+                // If search is set, we don't cache the results
+                return $detours;
             }
         }
     }
