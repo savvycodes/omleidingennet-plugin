@@ -85,14 +85,18 @@ class DetoursPage extends Page
         $cacheKey = "detours." . $hash . option('omleidingennet.plugin.organisationId');
         $backupCacheKey = "backup.detours." . $hash . option('omleidingennet.plugin.organisationId');
 
+        // 1) Try primary cache
+        $detoursCached = $cache->get($cacheKey);
 
-        $detours = $cache->get($cacheKey);
-        // only serve from cache when $search, $status or $areas is not set
-        if ($detours !== null && empty(isset($search))) {
-            return $detours;
+        // 2) If primary cache is still set, return it right away
+        if ($detoursCached !== null && empty(isset($search))) {
+            return $detoursCached;
         }
 
-        $query = <<<'GRAPHQL'
+        // 2) If primary cache is gone (or expired) try fetching new detours
+        if ($detoursCached === null) {
+
+            $query = <<<'GRAPHQL'
 query detours($organisationId: String!, $filter: DetoursFilter) {
   detours(organisationId: $organisationId, filter:$filter) {
     detours {
@@ -159,83 +163,90 @@ query detours($organisationId: String!, $filter: DetoursFilter) {
 }
 GRAPHQL;
 
-        // get detours from omleidingennet
-        $token = $this->getToken();
-        $take = 10; // todo: pagination
+            // get detours from omleidingennet
+            $token = $this->getToken();
+            $take = 10; // todo: pagination
 
-        $filter = [
-            'take' => $take,
-        ];
+            $filter = [
+                'take' => $take,
+            ];
 
-        if (isset($search) && !empty($search)) {
-            $filter['query'] = $search;
-        }
-        if (isset($status) && !empty($status)) {
-            $filter['status'] = $status;
-        }
-        if (isset($areas) && !empty($areas)) {
-            $filter['areas'] = [$areas];
-        }
+            if (isset($search) && !empty($search)) {
+                $filter['query'] = $search;
+            }
+            if (isset($status) && !empty($status)) {
+                $filter['status'] = $status;
+            }
+            if (isset($areas) && !empty($areas)) {
+                $filter['areas'] = [$areas];
+            }
 
-        // contiously fetch detours until totalCount is reached
-        $detours = [];
-        $skip = 0;
-        $totalCount = 0;
-        try {
-            do {
-                $filter['skip'] = $skip;
-                $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
-                    'headers' => [
-                        'Content-Type: application/json',
-                        'Authorization: Bearer ' . $token
-                    ],
-                    'data' => json_encode([
-                        'query' => $query,
-                        'variables' => [
-                            'organisationId' => option('omleidingennet.plugin.organisationId'),
-                            'filter' => $filter
-                        ]
-                    ])
-                ]);
+            // contiously fetch detours until totalCount is reached
+            $detours = [];
+            $skip = 0;
+            $totalCount = 0;
+            try {
+                do {
+                    $filter['skip'] = $skip;
+                    $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
+                        'headers' => [
+                            'Content-Type: application/json',
+                            'Authorization: Bearer ' . $token
+                        ],
+                        'data' => json_encode([
+                            'query' => $query,
+                            'variables' => [
+                                'organisationId' => option('omleidingennet.plugin.organisationId'),
+                                'filter' => $filter
+                            ]
+                        ])
+                    ]);
 
-                if ($res->code() === 200) {
-                    $data = $res->json();
+                    if ($res->code() === 200) {
+                        $data = $res->json();
 
-                    if (isset($data['error'])) {
-                        throw new Exception($data['error']['message']);
+                        if (isset($data['error'])) {
+                            throw new Exception($data['error']['message']);
+                        }
+
+                        $totalCount = $data['data']['detours']['totalCount'];
+                        $detours = array_merge($detours, $data['data']['detours']['detours']);
+                        $skip += $take;
+                    } else {
+                        throw new Exception('Could not fetch detours: ' . $res->code());
                     }
+                } while (count($detours) < $totalCount);
+            } catch (Exception $e) {
+                \Sentry\captureException($e);
+            }
 
-                    $totalCount = $data['data']['detours']['totalCount'];
-                    $detours = array_merge($detours, $data['data']['detours']['detours']);
-                    $skip += $take;
-                } else {
-                    throw new Exception('Could not fetch detours: ' . $res->code());
-                }
-            } while (count($detours) < $totalCount);
-        } catch (Exception $e) {
-            \Sentry\captureException($e);
+            // if filter is not set and showAll == false, filter out detours with status 'Afgerond'
+            if ((empty($status) || $status === '') && $hideCompleted) {
+                $detours = array_values(array_filter($detours, function ($detour) {
+                    return $detour['status'] !== 'Afgerond';
+                }));
+            }
 
-            // Fallback to backup cache if request fails
-            $backupDetours = $backupCache->get($backupCacheKey);
-            if ($backupDetours !== null) {
+            // 3) If we have results and search is empty, cache them
+            if (empty($search) && !empty($detours)) {
+                // Set primary so the TTL restarts
+                $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
+                // Set backup cache without TTL
+                $backupCache->set($backupCacheKey, $detours);
+
+                // Return the detours
+                return $detours;
+            } else {
+                // If no detours are found, use the backup cache
+                $backupDetours = $backupCache->get($backupCacheKey);
+
+                // Set primary so the TTL restarts
+                $cache->set($cacheKey, $backupDetours, option('omleidingennet.plugin.ttl'));
+
+                // Return the backup detours
                 return $backupDetours;
             }
         }
-
-        // if filter is not set and showAll == false, filter out detours with status 'Afgerond'
-        if ((empty($status) || $status === '') && $hideCompleted) {
-            $detours = array_values(array_filter($detours, function ($detour) {
-                return $detour['status'] !== 'Afgerond';
-            }));
-        }
-
-        // cache for ttl minutes
-        if (empty($search)) {
-            $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
-            $backupCache->set($backupCacheKey, $detours); // no timout for backup cache
-        }
-
-        return $detours;
     }
 
     public function apiDetours()
