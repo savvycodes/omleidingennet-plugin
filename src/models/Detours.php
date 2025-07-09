@@ -225,7 +225,7 @@ GRAPHQL;
             }
 
             // If we have results and search is empty, cache them
-            if (empty($search) && $detours !== null) {
+            if (empty($search) && !empty($detours)) {
                 // Set primary so the TTL restarts
                 $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
                 // Set backup cache without TTL
@@ -233,7 +233,7 @@ GRAPHQL;
 
                 // Return the detours
                 return $detours;
-            } elseif (empty($search) && $detours === null) {
+            } elseif (empty($search) && empty($detours)) {
                 // If no detours are found, use the backup cache
                 $backupDetours = $backupCache->get($backupCacheKey);
 
@@ -287,15 +287,21 @@ GRAPHQL;
 
     private function fetchAreas()
     {
-        $key = 'areas.' . option('omleidingennet.plugin.organisationId');
-        $cache = kirby()->cache('omleidingennet.plugin');
-        $areas = $cache->get($key);
-        // only serve from cache when $search, $status or $areas is not set
-        if ($areas !== null) {
-            return $areas;
-        }
+        $cacheKey = 'areas.' . option('omleidingennet.plugin.organisationId');
+        $backupCacheKey = 'backup.areas.' . option('omleidingennet.plugin.organisationId');
 
-        $query = <<<'GRAPHQL'
+        $cache = kirby()->cache('omleidingennet.plugin');
+        $backupCache = kirby()->cache('backup.omleidingennet.plugin');
+
+        // Try primary cache (This will automatically empty after ttl)
+        $areasCached = $cache->get($cacheKey);
+
+        // If primary cache is still set, return it right away
+        if ($areasCached !== null) {
+            return $areasCached;
+        } else {
+            // If primary cache is gone (or expired) try fetching new areas
+            $query = <<<'GRAPHQL'
 query areas($organisationId: String!) {
   areas(organisationId: $organisationId) {
     id
@@ -305,39 +311,53 @@ query areas($organisationId: String!) {
 }
 GRAPHQL;
 
-        // get detours from omleidingennet
-        $token = $this->getToken();
+            // get detours from omleidingennet
+            $token = $this->getToken();
 
-        $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
-            'headers' => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $token
-            ],
-            'data' => json_encode([
-                'query' => $query,
-                'variables' => [
-                    'organisationId' => option('omleidingennet.plugin.organisationId'),
-                ]
-            ])
-        ]);
+            $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
+                'headers' => [
+                    'Content-Type: application/json',
+                    'Authorization: Bearer ' . $token
+                ],
+                'data' => json_encode([
+                    'query' => $query,
+                    'variables' => [
+                        'organisationId' => option('omleidingennet.plugin.organisationId'),
+                    ]
+                ])
+            ]);
 
-        if ($res->code() === 200) {
-            $data = $res->json();
-            if (isset($data['error'])) {
-                throw new Exception($data['error']['message']);
+            if ($res->code() === 200) {
+                $data = $res->json();
+                if (isset($data['error'])) {
+                    throw new Exception($data['error']['message']);
+                }
+                if (isset($data['errors'])) {
+                    throw new Exception(json_encode($data['errors'][0]['message']));
+                }
+
+                $areas = $data['data']['areas'];
+
+                // If we have results, cache them
+                if (!empty($areas)) {
+                    // Set primary so the TTL restarts
+                    $cache->set($cacheKey, $areas, option('omleidingennet.plugin.ttl'));
+                    // Set backup cache without TTL
+                    $backupCache->set($backupCacheKey, $areas);
+
+                    // Return the areas
+                    return $areas;
+                } elseif (empty($areas)) {
+                    // If no areas are found, use the backup cache
+                    $backupAreas = $backupCache->get($backupCacheKey);
+
+                    // Set primary so the TTL restarts
+                    $cache->set($cacheKey, $backupAreas, option('omleidingennet.plugin.ttl'));
+
+                    // Return the backup areas
+                    return $backupAreas;
+                }
             }
-            if (isset($data['errors'])) {
-                throw new Exception(json_encode($data['errors'][0]['message']));
-            }
-
-            $areas = $data['data']['areas'];
-
-            // cache for ttl minutes
-            if ($areas) {
-                $cache->set($key, $areas, option('omleidingennet.plugin.ttl'));
-            }
-
-            return $areas;
         }
         throw new Exception('Could not fetch areas');
     }
