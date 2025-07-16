@@ -63,15 +63,45 @@ class DetourPage extends Page
         } else {
             $fases = $this->fases();
 
-            $start = A::get($fases, '0.beginDateAlternative');
-            if (!$start) {
-                $start = A::get($fases, '0.beginDate') ? new \DateTime(A::get($fases, '0.beginDate'), new \DateTimeZone('Europe/Amsterdam')) : null;
-                $start = $start ? $start->format('j-m-Y') : null;
-            }
+            // if first fase has a textual beginDateAlternative, use that
+            $start = A::get(A::first($fases), 'beginDateAlternative');
+
+            // if last fase has a textual endDateAlternative, use that
             $end = A::get(A::last($fases), 'endDateAlternative');
-            if (!$end) {
-                $end = A::get(A::last($fases), 'endDate') ? new \DateTime(A::get(A::last($fases), 'endDate'), new \DateTimeZone('Europe/Amsterdam')) : null;
-                $end = $end ? $end->format('j-m-Y') : null;
+
+            // Loop through fases to find the earliest and latest 
+            if (!$start || !$end) {
+                $earliest = null;
+                $latest = null;
+
+                foreach ($fases as $fase) {
+                    $beginDateString = A::get($fase, 'beginDate');
+                    $endDateString = A::get($fase, 'endDate');
+
+                    if ($beginDateString) {
+                        $date = new \DateTime($beginDateString, new \DateTimeZone('Europe/Amsterdam'));
+
+                        if (!$earliest || $date < $earliest) {
+                            $earliest = $date;
+                        }
+                    }
+
+                    if ($endDateString) {
+                        $date = new \DateTime($endDateString, new \DateTimeZone('Europe/Amsterdam'));
+
+                        if (!$latest || $date > $latest) {
+                            $latest = $date;
+                        }
+                    }
+                }
+
+                // If no textual start or textual end was set, use the earliest and latest dates found
+                if (!$start) {
+                    $start = $earliest ? $earliest->format('j-m-Y') : null;
+                }
+                if (!$end) {
+                    $end = $latest ? $latest->format('j-m-Y') : null;
+                }
             }
         }
 
