@@ -63,15 +63,43 @@ class DetourPage extends Page
         } else {
             $fases = $this->fases();
 
+            // if first fase has a textual beginDateAlternative, use that
             $start = A::get($fases, '0.beginDateAlternative');
+
+            // if no beginDateAlternative, use the first fase's beginDate
             if (!$start) {
-                $start = A::get($fases, '0.beginDate') ? new \DateTime(A::get($fases, '0.beginDate'), new \DateTimeZone('Europe/Amsterdam')) : null;
-                $start = $start ? $start->format('j-m-Y') : null;
+                $earliest = null;
+                foreach ($fases as $fase) {
+                    $dateString = A::get($fase, 'beginDate');
+
+                    if ($dateString) {
+                        $date = new \DateTime($dateString, new \DateTimeZone('Europe/Amsterdam'));
+                        if (!$earliest || $date < $earliest) {
+                            $earliest = $date;
+                        }
+                    }
+                }
+                $start = $earliest ? $earliest->format('j-m-Y') : null;
             }
+
+            // if last fase has a textual endDateAlternative, use that
             $end = A::get(A::last($fases), 'endDateAlternative');
+
+            // if no endDateAlternative, loop through fases to find the latest end date
             if (!$end) {
-                $end = A::get(A::last($fases), 'endDate') ? new \DateTime(A::get(A::last($fases), 'endDate'), new \DateTimeZone('Europe/Amsterdam')) : null;
-                $end = $end ? $end->format('j-m-Y') : null;
+                $latest = null;
+                foreach ($fases as $fase) {
+                    $dateString = A::get($fase, 'endDate');
+
+                    if ($dateString) {
+                        $date = new \DateTime($dateString, new \DateTimeZone('Europe/Amsterdam'));
+                        if (!$latest || $date > $latest) {
+                            $latest = $date;
+                        }
+                    }
+                }
+
+                $end = $latest ? $latest->format('j-m-Y') : null;
             }
         }
 
