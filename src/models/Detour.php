@@ -64,42 +64,44 @@ class DetourPage extends Page
             $fases = $this->fases();
 
             // if first fase has a textual beginDateAlternative, use that
-            $start = A::get($fases, '0.beginDateAlternative');
-
-            // if no beginDateAlternative, use the first fase's beginDate
-            if (!$start) {
-                $earliest = null;
-                foreach ($fases as $fase) {
-                    $dateString = A::get($fase, 'beginDate');
-
-                    if ($dateString) {
-                        $date = new \DateTime($dateString, new \DateTimeZone('Europe/Amsterdam'));
-                        if (!$earliest || $date < $earliest) {
-                            $earliest = $date;
-                        }
-                    }
-                }
-                $start = $earliest ? $earliest->format('j-m-Y') : null;
-            }
+            $start = A::get(A::first($fases), 'beginDateAlternative');
 
             // if last fase has a textual endDateAlternative, use that
             $end = A::get(A::last($fases), 'endDateAlternative');
 
-            // if no endDateAlternative, loop through fases to find the latest end date
-            if (!$end) {
+            // Loop through fases to find the earliest and latest 
+            if (!$start || !$end) {
+                $earliest = null;
                 $latest = null;
-                foreach ($fases as $fase) {
-                    $dateString = A::get($fase, 'endDate');
 
-                    if ($dateString) {
-                        $date = new \DateTime($dateString, new \DateTimeZone('Europe/Amsterdam'));
+                foreach ($fases as $fase) {
+                    $beginDateString = A::get($fase, 'beginDate');
+                    $endDateString = A::get($fase, 'endDate');
+
+                    if ($beginDateString) {
+                        $date = new \DateTime($beginDateString, new \DateTimeZone('Europe/Amsterdam'));
+
+                        if (!$earliest || $date < $earliest) {
+                            $earliest = $date;
+                        }
+                    }
+
+                    if ($endDateString) {
+                        $date = new \DateTime($endDateString, new \DateTimeZone('Europe/Amsterdam'));
+
                         if (!$latest || $date > $latest) {
                             $latest = $date;
                         }
                     }
                 }
 
-                $end = $latest ? $latest->format('j-m-Y') : null;
+                // If no textual start or textual end was set, use the earliest and latest dates found
+                if (!$start) {
+                    $start = $earliest ? $earliest->format('j-m-Y') : null;
+                }
+                if (!$end) {
+                    $end = $latest ? $latest->format('j-m-Y') : null;
+                }
             }
         }
 
