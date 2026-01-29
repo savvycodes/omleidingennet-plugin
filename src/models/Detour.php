@@ -12,6 +12,8 @@ class DetourPage extends Page
     public function fases()
     {
         $fases = A::get($this->content()->get('fases')->toArray(), 'fases');
+        if (!$fases || !(is_array($fases))) return []; // Return empty array if fases is not set or not an array
+
         return $fases;
     }
 
@@ -28,6 +30,8 @@ class DetourPage extends Page
         $status = $this->current_status();
 
         $beginDate = null;
+        if (count($this->fases()) === 0) return '9999-0'; // No phases available
+        
 
         if ($fase = $this->fases()[0]) {
             $beginDate = A::get($fase, 'beginDate');
@@ -124,6 +128,8 @@ class DetourPage extends Page
 
     public function startDate()
     {
+        if (count($this->fases()) === 0) return null; // No phases available
+        
         $first_fase = A::first($this->fases());
         if (empty($first_fase['beginDateAlternative']) && empty($first_fase['beginDate'])) {
             return null;
@@ -138,6 +144,8 @@ class DetourPage extends Page
 
     public function endDate()
     {
+        if (count($this->fases()) === 0) return null; // No phases available
+
         $fase = A::last($this->fases());
 
         if (empty($fase['endDateAlternative']) && empty($fase['endDate'])) {
