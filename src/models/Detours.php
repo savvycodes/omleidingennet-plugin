@@ -336,6 +336,8 @@ GRAPHQL;
         $areas = $this->fetchAreas();
         $pages = [];
 
+        if (!$areas) return Pages::factory($pages, $this);
+
         foreach ($areas as $area) {
             $slug = $area['id'];
             $page = $this->subpages()->find($slug);
@@ -361,6 +363,7 @@ GRAPHQL;
     private function activeFase($fases)
     {
         $selected = null;
+        if (!$fases || count($fases) === 0) return $selected;
         foreach ($fases as $fase) {
             if ($fase['status'] === 'In uitvoering') {
                 $fase['label'] = 'Huidige fase';
