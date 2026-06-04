@@ -125,6 +125,7 @@ GRAPHQL;
         $arr = [];
         $skip = 0;
         $totalCount = 0;
+        $completedFetch = false;
         try {
             do {
                 $filter['skip'] = $skip;
@@ -160,6 +161,8 @@ GRAPHQL;
                     throw new Exception('Could not fetch detours: ' . $res->code());
                 }
             } while (count($arr) < $totalCount);
+
+            $completedFetch = count($arr) >= $totalCount;
         } catch (Exception $e) {
             \Sentry\captureException($e);
 
@@ -168,6 +171,10 @@ GRAPHQL;
             if ($backupPois !== null) {
                 return $backupPois;
             }
+        }
+
+        if ($completedFetch === false) {
+            return $arr;
         }
 
         // cache for ttl minutes
