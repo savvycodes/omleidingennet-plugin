@@ -13,6 +13,8 @@ F::loadClasses([
     'omleidingennet\\plugin\\pointofinterestspage' => 'src/models/PointOfInterests.php',
     'omleidingennet\\plugin\\pointofinterestpage' => 'src/models/PointOfInterest.php',
     'omleidingennet\\plugin\\organisation' => 'src/Organisation.php',
+    'omleidingennet\\plugin\\cache' => 'src/Cache.php',
+    'omleidingennet\\plugin\\refreshcache' => 'src/RefreshCache.php',
 ], __DIR__);
 
 Kirby::plugin('omleidingennet/plugin', [
@@ -83,6 +85,15 @@ Kirby::plugin('omleidingennet/plugin', [
 
                 $organisation = new \Omleidingennet\Plugin\Organisation();
                 return $organisation->apiOrganisation();
+            }
+        ],
+    ],
+    'commands' => [
+        'omleidingennet:refresh-cache' => [
+            'description' => 'Refresh Omleidingennet detours, POIs and organisation cache',
+            'args' => [],
+            'command' => function ($cli) {
+                \Omleidingennet\Plugin\RefreshCache::run($cli);
             }
         ],
     ],
