@@ -12,11 +12,27 @@ class Organisation
     private function fetchOrganisation($refresh = false)
     {
         $key = 'organisation.' . option('omleidingennet.plugin.organisationId');
+        $backupKey = 'backup.organisation.' . option('omleidingennet.plugin.organisationId');
         $cache = kirby()->cache('omleidingennet.plugin');
+        $backupCache = kirby()->cache('backup.omleidingennet.plugin');
         $organisation = $cache->get($key);
 
-        if ($refresh === false && $organisation !== null) {
-            return $organisation;
+        if ($refresh === false) {
+            if ($organisation !== null) {
+                return $organisation;
+            }
+
+            $backupOrganisation = $backupCache->get($backupKey);
+            if ($backupOrganisation !== null) {
+                return $backupOrganisation;
+            }
+
+            $cliOrganisation = Cache::cli('omleidingennet.plugin')->get($key);
+            if ($cliOrganisation !== null) {
+                return $cliOrganisation;
+            }
+
+            return Cache::cli('backup.omleidingennet.plugin')->get($backupKey);
         }
 
         $query = <<<'GRAPHQL'
@@ -57,6 +73,7 @@ class Organisation
             // cache for ttl minutes
             if ($organisation) {
                 $cache->set($key, $organisation, option('omleidingennet.plugin.ttl'));
+                $backupCache->set($backupKey, $organisation);
             }
 
             return $organisation;

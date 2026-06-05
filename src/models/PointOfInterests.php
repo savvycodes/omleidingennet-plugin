@@ -75,9 +75,22 @@ class PointOfInterestsPage extends Page
         $backupCacheKey = "backup.pois." . $hash . option('omleidingennet.plugin.organisationId');
 
         $pois = $cache->get($cacheKey);
-        // only serve from cache when $search, $status or $areas is not set
-        if ($refresh === false && $pois !== null && empty(isset($search))) {
-            return $pois;
+        if ($refresh === false) {
+            if ($pois !== null) {
+                return $pois;
+            }
+
+            $backupPois = $backupCache->get($backupCacheKey);
+            if ($backupPois !== null) {
+                return $backupPois;
+            }
+
+            $cliPois = Cache::cli('omleidingennet.plugin')->get($cacheKey);
+            if ($cliPois !== null) {
+                return $cliPois;
+            }
+
+            return Cache::cli('backup.omleidingennet.plugin')->get($backupCacheKey) ?? [];
         }
 
         $query = <<<'GRAPHQL'
@@ -224,16 +237,31 @@ GRAPHQL;
     private function types($search = null, $type = null, $refresh = false)
     {
         $cache = kirby()->cache('omleidingennet.plugin');
+        $backupCache = kirby()->cache('backup.omleidingennet.plugin');
         $hashKey = (empty($status) ? '' :  $status) . (empty($areas) ? '' : $areas);
         $hash = hash('sha256', $hashKey);
 
         // create sha256 of status and areas
         $cacheKey = "types." . $hash . option('omleidingennet.plugin.organisationId');
+        $backupCacheKey = "backup.types." . $hash . option('omleidingennet.plugin.organisationId');
 
         $types = $cache->get($cacheKey);
-        // only serve from cache when $search, $status or $areas is not set
-        if ($refresh === false && $types !== null && empty(isset($search))) {
-            return $types;
+        if ($refresh === false) {
+            if ($types !== null) {
+                return $types;
+            }
+
+            $backupTypes = $backupCache->get($backupCacheKey);
+            if ($backupTypes !== null) {
+                return $backupTypes;
+            }
+
+            $cliTypes = Cache::cli('omleidingennet.plugin')->get($cacheKey);
+            if ($cliTypes !== null) {
+                return $cliTypes;
+            }
+
+            return Cache::cli('backup.omleidingennet.plugin')->get($backupCacheKey) ?? [];
         }
 
         $query = <<<'GRAPHQL'
@@ -287,6 +315,7 @@ GRAPHQL;
         // cache for ttl minutes
         if (empty($search)) {
             $cache->set($cacheKey, $arr, option('omleidingennet.plugin.ttl'));
+            $backupCache->set($backupCacheKey, $arr);
         }
 
         return $arr;

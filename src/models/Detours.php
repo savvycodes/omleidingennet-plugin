@@ -85,9 +85,22 @@ class DetoursPage extends Page
         $backupCacheKey = "backup.detours." . $hash . option('omleidingennet.plugin.organisationId');
 
         $detours = $cache->get($cacheKey);
-        // only serve from cache when $search, $status or $areas is not set
-        if ($refresh === false && $detours !== null && empty(isset($search))) {
-            return $detours;
+        if ($refresh === false) {
+            if ($detours !== null) {
+                return $detours;
+            }
+
+            $backupDetours = $backupCache->get($backupCacheKey);
+            if ($backupDetours !== null) {
+                return $backupDetours;
+            }
+
+            $cliDetours = Cache::cli('omleidingennet.plugin')->get($cacheKey);
+            if ($cliDetours !== null) {
+                return $cliDetours;
+            }
+
+            return Cache::cli('backup.omleidingennet.plugin')->get($backupCacheKey) ?? [];
         }
 
         $query = <<<'GRAPHQL'
@@ -301,11 +314,26 @@ GRAPHQL;
     private function fetchAreas($refresh = false)
     {
         $key = 'areas.' . option('omleidingennet.plugin.organisationId');
+        $backupKey = 'backup.areas.' . option('omleidingennet.plugin.organisationId');
         $cache = kirby()->cache('omleidingennet.plugin');
+        $backupCache = kirby()->cache('backup.omleidingennet.plugin');
         $areas = $cache->get($key);
-        // only serve from cache when $search, $status or $areas is not set
-        if ($refresh === false && $areas !== null) {
-            return $areas;
+        if ($refresh === false) {
+            if ($areas !== null) {
+                return $areas;
+            }
+
+            $backupAreas = $backupCache->get($backupKey);
+            if ($backupAreas !== null) {
+                return $backupAreas;
+            }
+
+            $cliAreas = Cache::cli('omleidingennet.plugin')->get($key);
+            if ($cliAreas !== null) {
+                return $cliAreas;
+            }
+
+            return Cache::cli('backup.omleidingennet.plugin')->get($backupKey) ?? [];
         }
 
         $query = <<<'GRAPHQL'
@@ -348,6 +376,7 @@ GRAPHQL;
             // cache for ttl minutes
             if ($areas) {
                 $cache->set($key, $areas, option('omleidingennet.plugin.ttl'));
+                $backupCache->set($backupKey, $areas);
             }
 
             return $areas;
