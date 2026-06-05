@@ -193,17 +193,10 @@ GRAPHQL;
         $skip = 0;
         $totalCount = 0;
         $completedFetch = false;
-        $testLog = kirby()->root('site') . '/logs/omleidingennet-detours-test.log';
-        $testRequestId = uniqid('detours-', true);
-        $testDelaySeconds = 0;
-
-        file_put_contents($testLog, sprintf("[%s] %s start\n", date('c'), $testRequestId), FILE_APPEND);
 
         try {
             do {
                 $filter['skip'] = $skip;
-                file_put_contents($testLog, sprintf("[%s] %s request skip=%d count=%d aborted=%d\n", date('c'), $testRequestId, $skip, count($detours), connection_aborted()), FILE_APPEND);
-
                 $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
                     'headers' => [
                         'Content-Type: application/json',
@@ -227,10 +220,7 @@ GRAPHQL;
 
                     $totalCount = $data['data']['detours']['totalCount'];
                     $detours = array_merge($detours, $data['data']['detours']['detours']);
-                    file_put_contents($testLog, sprintf("[%s] %s response skip=%d count=%d total=%d aborted=%d\n", date('c'), $testRequestId, $skip, count($detours), $totalCount, connection_aborted()), FILE_APPEND);
 
-
-                    sleep($testDelaySeconds);
                     $skip += $take;
                 } else {
                     throw new Exception('Could not fetch detours: ' . $res->code());
@@ -238,9 +228,7 @@ GRAPHQL;
             } while (count($detours) < $totalCount);
 
             $completedFetch = count($detours) >= $totalCount;
-            file_put_contents($testLog, sprintf("[%s] %s complete count=%d total=%d aborted=%d\n", date('c'), $testRequestId, count($detours), $totalCount, connection_aborted()), FILE_APPEND);
         } catch (Exception $e) {
-            file_put_contents($testLog, sprintf("[%s] %s catch count=%d total=%d message=%s aborted=%d\n", date('c'), $testRequestId, count($detours), $totalCount, $e->getMessage(), connection_aborted()), FILE_APPEND);
             \Sentry\captureException($e);
 
             // Fallback to backup cache if request fails
@@ -261,9 +249,9 @@ GRAPHQL;
             return $detours;
         }
 
-        // cache for ttl minutes
+        // cache until the Kirby command refreshes it
         if (empty($search)) {
-            $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
+            $cache->set($cacheKey, $detours);
             $backupCache->set($backupCacheKey, $detours); // no timout for backup cache
         }
 
@@ -373,9 +361,9 @@ GRAPHQL;
 
             $areas = $data['data']['areas'];
 
-            // cache for ttl minutes
+            // cache until the Kirby command refreshes it
             if ($areas) {
-                $cache->set($key, $areas, option('omleidingennet.plugin.ttl'));
+                $cache->set($key, $areas);
                 $backupCache->set($backupKey, $areas);
             }
 

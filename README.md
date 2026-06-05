@@ -64,7 +64,6 @@ _Document the options and APIs that this plugin offers_
 [
   'options' => [
     'cache' => true,
-    'ttl' => 5,
     'url' => 'https://www.omleidingennet.nl',
     'organisationId' => '',
     'clientId' => '',

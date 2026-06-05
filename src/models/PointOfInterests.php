@@ -189,9 +189,9 @@ GRAPHQL;
             return $arr;
         }
 
-        // cache for ttl minutes
+        // cache until the Kirby command refreshes it
         if (empty($search)) {
-            $cache->set($cacheKey, $arr, option('omleidingennet.plugin.ttl'));
+            $cache->set($cacheKey, $arr);
             $backupCache->set($backupCacheKey, $arr); // no timout for backup cache
 
         }
@@ -312,9 +312,9 @@ GRAPHQL;
             // throw new Exception($data, $res->code());
         }
 
-        // cache for ttl minutes
+        // cache until the Kirby command refreshes it
         if (empty($search)) {
-            $cache->set($cacheKey, $arr, option('omleidingennet.plugin.ttl'));
+            $cache->set($cacheKey, $arr);
             $backupCache->set($backupCacheKey, $arr);
         }
 

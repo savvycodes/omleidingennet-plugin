@@ -70,9 +70,9 @@ class Organisation
             }
 
             $organisation = $data['data']['organisation'];
-            // cache for ttl minutes
+            // cache until the Kirby command refreshes it
             if ($organisation) {
-                $cache->set($key, $organisation, option('omleidingennet.plugin.ttl'));
+                $cache->set($key, $organisation);
                 $backupCache->set($backupKey, $organisation);
             }
 

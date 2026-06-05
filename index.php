@@ -33,7 +33,6 @@ Kirby::plugin('omleidingennet/plugin', [
     'options' => [
         'url' => 'https://www.omleidingennet.nl',
         'cache' => true,
-        'ttl' => 5,
         'organisationId' => '',
         'clientId' => '',
         'clientSecret' => '',
