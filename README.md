@@ -38,6 +38,24 @@ Add `organisationId`, `clientId` and `clientSecret` to your `config.php`
 ]
 ```
 
+## Cache refresh command
+
+Public Omleidingennet routes serve cached data only. They do not call the Omleidingennet API when a visitor loads a page. Refresh the cache manually with the Kirby CLI command:
+
+```
+kirby omleidingennet:refresh-cache
+```
+
+In this project, you can also run it through Composer without a global `kirby` binary:
+
+```
+composer omleidingennet:refresh-cache
+```
+
+The command refreshes detours, areas, POIs, POI types and organisation data. Public data cache entries do not expire on visitor requests; the site keeps serving the last complete refresh until the command replaces it. Overlapping refreshes are skipped while a refresh is already running.
+
+The Kirby CLI package must be installed on the server for the `kirby` command to be available.
+
 ## Options
 
 _Document the options and APIs that this plugin offers_

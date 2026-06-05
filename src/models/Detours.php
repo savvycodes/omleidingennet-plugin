@@ -73,7 +73,7 @@ class DetoursPage extends Page
         return Token::get();
     }
 
-    private function detours($search = null, $status = null, $areas = null, $hideCompleted = false)
+    private function detours($search = null, $status = null, $areas = null, $hideCompleted = false, $refresh = false)
     {
         $cache = kirby()->cache('omleidingennet.plugin');
         $backupCache = kirby()->cache('backup.omleidingennet.plugin');
@@ -81,14 +81,12 @@ class DetoursPage extends Page
         $hashKey = (empty($status) ? '' :  $status) . (empty($areas) ? '' : $areas);
         $hash = hash('sha256', $hashKey);
 
-        // create sha256 of status and areas
         $cacheKey = "detours." . $hash . option('omleidingennet.plugin.organisationId');
         $backupCacheKey = "backup.detours." . $hash . option('omleidingennet.plugin.organisationId');
 
-
         $detours = $cache->get($cacheKey);
         // only serve from cache when $search, $status or $areas is not set
-        if ($detours !== null && empty(isset($search))) {
+        if ($refresh === false && $detours !== null && empty(isset($search))) {
             return $detours;
         }
 
@@ -218,9 +216,6 @@ GRAPHQL;
                     $detours = array_merge($detours, $data['data']['detours']['detours']);
                     file_put_contents($testLog, sprintf("[%s] %s response skip=%d count=%d total=%d aborted=%d\n", date('c'), $testRequestId, $skip, count($detours), $totalCount, connection_aborted()), FILE_APPEND);
 
-                    if (count($detours) >= 40) {
-                        throw new Exception('Forced partial detours fetch before cache write');
-                    }
 
                     sleep($testDelaySeconds);
                     $skip += $take;
@@ -262,6 +257,11 @@ GRAPHQL;
         return $detours;
     }
 
+    public function refreshCache()
+    {
+        return $this->detours(null, null, null, false, true);
+    }
+
     public function apiDetours()
     {
         $search = get('search_query');
@@ -298,13 +298,13 @@ GRAPHQL;
         }
     }
 
-    private function fetchAreas()
+    private function fetchAreas($refresh = false)
     {
         $key = 'areas.' . option('omleidingennet.plugin.organisationId');
         $cache = kirby()->cache('omleidingennet.plugin');
         $areas = $cache->get($key);
         // only serve from cache when $search, $status or $areas is not set
-        if ($areas !== null) {
+        if ($refresh === false && $areas !== null) {
             return $areas;
         }
 
@@ -382,6 +382,11 @@ GRAPHQL;
         }
 
         return Pages::factory($pages, $this);
+    }
+
+    public function refreshAreasCache()
+    {
+        return $this->fetchAreas(true);
     }
 
     private function activeFase($fases)

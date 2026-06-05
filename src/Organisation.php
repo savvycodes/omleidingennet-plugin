@@ -9,12 +9,13 @@ use Kirby\Http\Response;
 class Organisation
 {
 
-    private function fetchOrganisation()
+    private function fetchOrganisation($refresh = false)
     {
         $key = 'organisation.' . option('omleidingennet.plugin.organisationId');
         $cache = kirby()->cache('omleidingennet.plugin');
         $organisation = $cache->get($key);
-        if ($organisation !== null) {
+
+        if ($refresh === false && $organisation !== null) {
             return $organisation;
         }
 
@@ -68,5 +69,10 @@ class Organisation
         $organisation = $this->fetchOrganisation();
 
         return Response::json(['organisation' => $organisation]);
+    }
+
+    public function refreshCache()
+    {
+        return $this->fetchOrganisation(true);
     }
 }

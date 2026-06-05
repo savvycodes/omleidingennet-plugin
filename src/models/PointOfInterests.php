@@ -63,21 +63,20 @@ class PointOfInterestsPage extends Page
         return Token::get();
     }
 
-    private function pois($search = null, $type = null)
+    private function pois($search = null, $type = null, $refresh = false)
     {
         $cache = kirby()->cache('omleidingennet.plugin');
         $backupCache = kirby()->cache('backup.omleidingennet.plugin');
 
-        $hashKey = (empty($status) ? '' :  $status) . (empty($areas) ? '' : $areas);
+        $hashKey = '';
         $hash = hash('sha256', $hashKey);
 
-        // create sha256 of status and areas
         $cacheKey = "pois." . $hash . option('omleidingennet.plugin.organisationId');
         $backupCacheKey = "backup.pois." . $hash . option('omleidingennet.plugin.organisationId');
 
         $pois = $cache->get($cacheKey);
         // only serve from cache when $search, $status or $areas is not set
-        if ($pois !== null && empty(isset($search))) {
+        if ($refresh === false && $pois !== null && empty(isset($search))) {
             return $pois;
         }
 
@@ -187,6 +186,11 @@ GRAPHQL;
         return $arr;
     }
 
+    public function refreshCache()
+    {
+        return $this->pois(null, null, true);
+    }
+
     public function apiPointOfInterests()
     {
         $search = get('search_query');
@@ -217,7 +221,7 @@ GRAPHQL;
         }
     }
 
-    private function types($search = null, $type = null)
+    private function types($search = null, $type = null, $refresh = false)
     {
         $cache = kirby()->cache('omleidingennet.plugin');
         $hashKey = (empty($status) ? '' :  $status) . (empty($areas) ? '' : $areas);
@@ -228,7 +232,7 @@ GRAPHQL;
 
         $types = $cache->get($cacheKey);
         // only serve from cache when $search, $status or $areas is not set
-        if ($types !== null && empty(isset($search))) {
+        if ($refresh === false && $types !== null && empty(isset($search))) {
             return $types;
         }
 
@@ -301,5 +305,10 @@ GRAPHQL;
         }, $types);
 
         return $types;
+    }
+
+    public function refreshTypesCache()
+    {
+        return $this->types(null, null, true);
     }
 }
