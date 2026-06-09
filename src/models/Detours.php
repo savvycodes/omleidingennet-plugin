@@ -81,6 +81,7 @@ class DetoursPage extends Page
         $hashKey = (empty($status) ? '' :  $status) . (empty($areas) ? '' : $areas);
         $hash = hash('sha256', $hashKey);
 
+        // create sha256 of status and areas
         $cacheKey = "detours." . $hash . option('omleidingennet.plugin.organisationId');
         $backupCacheKey = "backup.detours." . $hash . option('omleidingennet.plugin.organisationId');
 
