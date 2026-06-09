@@ -68,7 +68,7 @@ class PointOfInterestsPage extends Page
         $cache = kirby()->cache('omleidingennet.plugin');
         $backupCache = kirby()->cache('backup.omleidingennet.plugin');
 
-        $hashKey = '';
+        $hashKey = (empty($status) ? '' :  $status) . (empty($areas) ? '' : $areas);
         $hash = hash('sha256', $hashKey);
 
         $cacheKey = "pois." . $hash . option('omleidingennet.plugin.organisationId');
