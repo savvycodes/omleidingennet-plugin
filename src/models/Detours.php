@@ -73,7 +73,7 @@ class DetoursPage extends Page
         return Token::get();
     }
 
-    private function detours($search = null, $status = null, $areas = null, $hideCompleted = false)
+    private function detours($search = null, $status = null, $areas = null, $hideCompleted = false, $refresh = false)
     {
         $cache = kirby()->cache('omleidingennet.plugin');
         $backupCache = kirby()->cache('backup.omleidingennet.plugin');
@@ -85,11 +85,23 @@ class DetoursPage extends Page
         $cacheKey = "detours." . $hash . option('omleidingennet.plugin.organisationId');
         $backupCacheKey = "backup.detours." . $hash . option('omleidingennet.plugin.organisationId');
 
-
         $detours = $cache->get($cacheKey);
-        // only serve from cache when $search, $status or $areas is not set
-        if ($detours !== null && empty(isset($search))) {
-            return $detours;
+        if ($refresh === false) {
+            if ($detours !== null) {
+                return $detours;
+            }
+
+            $backupDetours = $backupCache->get($backupCacheKey);
+            if ($backupDetours !== null) {
+                return $backupDetours;
+            }
+
+            $cliDetours = Cache::cli('omleidingennet.plugin')->get($cacheKey);
+            if ($cliDetours !== null) {
+                return $cliDetours;
+            }
+
+            return Cache::cli('backup.omleidingennet.plugin')->get($backupCacheKey) ?? [];
         }
 
         $query = <<<'GRAPHQL'
@@ -181,6 +193,8 @@ GRAPHQL;
         $detours = [];
         $skip = 0;
         $totalCount = 0;
+        $completedFetch = false;
+
         try {
             do {
                 $filter['skip'] = $skip;
@@ -207,11 +221,14 @@ GRAPHQL;
 
                     $totalCount = $data['data']['detours']['totalCount'];
                     $detours = array_merge($detours, $data['data']['detours']['detours']);
+
                     $skip += $take;
                 } else {
                     throw new Exception('Could not fetch detours: ' . $res->code());
                 }
             } while (count($detours) < $totalCount);
+
+            $completedFetch = count($detours) >= $totalCount;
         } catch (Exception $e) {
             \Sentry\captureException($e);
 
@@ -229,13 +246,22 @@ GRAPHQL;
             }));
         }
 
-        // cache for ttl minutes
+        if ($completedFetch === false) {
+            return $detours;
+        }
+
+        // cache until the Kirby command refreshes it
         if (empty($search)) {
-            $cache->set($cacheKey, $detours, option('omleidingennet.plugin.ttl'));
+            $cache->set($cacheKey, $detours);
             $backupCache->set($backupCacheKey, $detours); // no timout for backup cache
         }
 
         return $detours;
+    }
+
+    public function refreshCache()
+    {
+        return $this->detours(null, null, null, false, true);
     }
 
     public function apiDetours()
@@ -274,14 +300,29 @@ GRAPHQL;
         }
     }
 
-    private function fetchAreas()
+    private function fetchAreas($refresh = false)
     {
         $key = 'areas.' . option('omleidingennet.plugin.organisationId');
+        $backupKey = 'backup.areas.' . option('omleidingennet.plugin.organisationId');
         $cache = kirby()->cache('omleidingennet.plugin');
+        $backupCache = kirby()->cache('backup.omleidingennet.plugin');
         $areas = $cache->get($key);
-        // only serve from cache when $search, $status or $areas is not set
-        if ($areas !== null) {
-            return $areas;
+        if ($refresh === false) {
+            if ($areas !== null) {
+                return $areas;
+            }
+
+            $backupAreas = $backupCache->get($backupKey);
+            if ($backupAreas !== null) {
+                return $backupAreas;
+            }
+
+            $cliAreas = Cache::cli('omleidingennet.plugin')->get($key);
+            if ($cliAreas !== null) {
+                return $cliAreas;
+            }
+
+            return Cache::cli('backup.omleidingennet.plugin')->get($backupKey) ?? [];
         }
 
         $query = <<<'GRAPHQL'
@@ -321,9 +362,10 @@ GRAPHQL;
 
             $areas = $data['data']['areas'];
 
-            // cache for ttl minutes
+            // cache until the Kirby command refreshes it
             if ($areas) {
-                $cache->set($key, $areas, option('omleidingennet.plugin.ttl'));
+                $cache->set($key, $areas);
+                $backupCache->set($backupKey, $areas);
             }
 
             return $areas;
@@ -358,6 +400,11 @@ GRAPHQL;
         }
 
         return Pages::factory($pages, $this);
+    }
+
+    public function refreshAreasCache()
+    {
+        return $this->fetchAreas(true);
     }
 
     private function activeFase($fases)
