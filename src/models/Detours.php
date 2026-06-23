@@ -78,30 +78,29 @@ class DetoursPage extends Page
         $cache = kirby()->cache('omleidingennet.plugin');
         $backupCache = kirby()->cache('backup.omleidingennet.plugin');
 
-        $hashKey = (empty($status) ? '' :  $status) . (empty($areas) ? '' : $areas);
-        $hash = hash('sha256', $hashKey);
-
-        // create sha256 of status and areas
-        $cacheKey = "detours." . $hash . option('omleidingennet.plugin.organisationId');
-        $backupCacheKey = "backup.detours." . $hash . option('omleidingennet.plugin.organisationId');
+        // All request filters are applied locally after reading the shared unfiltered cache.
+        $unfilteredCacheHash = hash('sha256', '');
+        $cacheKey = "detours." . $unfilteredCacheHash . option('omleidingennet.plugin.organisationId');
+        $backupCacheKey = "backup.detours." . $unfilteredCacheHash . option('omleidingennet.plugin.organisationId');
 
         $detours = $cache->get($cacheKey);
         if ($refresh === false) {
             if ($detours !== null) {
-                return $detours;
+                return $this->filterDetours($detours, $search, $status, $areas, $hideCompleted);
             }
 
             $backupDetours = $backupCache->get($backupCacheKey);
             if ($backupDetours !== null) {
-                return $backupDetours;
+                return $this->filterDetours($backupDetours, $search, $status, $areas, $hideCompleted);
             }
 
             $cliDetours = Cache::cli('omleidingennet.plugin')->get($cacheKey);
             if ($cliDetours !== null) {
-                return $cliDetours;
+                return $this->filterDetours($cliDetours, $search, $status, $areas, $hideCompleted);
             }
 
-            return Cache::cli('backup.omleidingennet.plugin')->get($backupCacheKey) ?? [];
+            $backupCliDetours = Cache::cli('backup.omleidingennet.plugin')->get($backupCacheKey) ?? [];
+            return $this->filterDetours($backupCliDetours, $search, $status, $areas, $hideCompleted);
         }
 
         $query = <<<'GRAPHQL'
@@ -179,16 +178,6 @@ GRAPHQL;
             'take' => $take,
         ];
 
-        if (isset($search) && !empty($search)) {
-            $filter['query'] = $search;
-        }
-        if (isset($status) && !empty($status)) {
-            $filter['status'] = $status;
-        }
-        if (isset($areas) && !empty($areas)) {
-            $filter['areas'] = [$areas];
-        }
-
         // contiously fetch detours until totalCount is reached
         $detours = [];
         $skip = 0;
@@ -235,8 +224,52 @@ GRAPHQL;
             // Fallback to backup cache if request fails
             $backupDetours = $backupCache->get($backupCacheKey);
             if ($backupDetours !== null) {
-                return $backupDetours;
+                return $this->filterDetours($backupDetours, $search, $status, $areas, $hideCompleted);
             }
+        }
+
+        if ($completedFetch === false) {
+            return $this->filterDetours($detours, $search, $status, $areas, $hideCompleted);
+        }
+
+        // cache until the Kirby command refreshes it
+        $cache->set($cacheKey, $detours);
+        $backupCache->set($backupCacheKey, $detours); // no timout for backup cache
+
+        return $this->filterDetours($detours, $search, $status, $areas, $hideCompleted);
+    }
+
+    private function filterDetours($detours, $search = null, $status = null, $areas = null, $hideCompleted = false)
+    {
+        if (isset($search) && !empty($search)) {
+            $query = $search;
+
+            $detours = array_values(array_filter($detours, function ($detour) use ($query) {
+                return stripos($detour['name'] ?? '', $query) !== false
+                    || stripos($detour['description'] ?? '', $query) !== false;
+            }));
+        }
+
+        if (isset($status) && !empty($status)) {
+            $detours = array_values(array_filter($detours, function ($detour) use ($status) {
+                return ($detour['status'] ?? null) === $status;
+            }));
+        }
+
+        if (isset($areas) && !empty($areas)) {
+            $selectedAreas = array_filter(array_map('trim', explode(',', $areas)));
+
+            $detours = array_values(array_filter($detours, function ($detour) use ($selectedAreas) {
+                foreach ($detour['fases'] ?? [] as $fase) {
+                    foreach ($fase['areas'] ?? [] as $area) {
+                        if (in_array($area['id'] ?? null, $selectedAreas, true)) {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }));
         }
 
         // if filter is not set and showAll == false, filter out detours with status 'Afgerond'
@@ -244,16 +277,6 @@ GRAPHQL;
             $detours = array_values(array_filter($detours, function ($detour) {
                 return $detour['status'] !== 'Afgerond';
             }));
-        }
-
-        if ($completedFetch === false) {
-            return $detours;
-        }
-
-        // cache until the Kirby command refreshes it
-        if (empty($search)) {
-            $cache->set($cacheKey, $detours);
-            $backupCache->set($backupCacheKey, $detours); // no timout for backup cache
         }
 
         return $detours;
