@@ -78,10 +78,9 @@ class DetoursPage extends Page
         $cache = kirby()->cache('omleidingennet.plugin');
         $backupCache = kirby()->cache('backup.omleidingennet.plugin');
 
-        // All request filters are applied locally after reading the shared unfiltered cache.
-        $unfilteredCacheHash = hash('sha256', '');
-        $cacheKey = "detours." . $unfilteredCacheHash . option('omleidingennet.plugin.organisationId');
-        $backupCacheKey = "backup.detours." . $unfilteredCacheHash . option('omleidingennet.plugin.organisationId');
+        $hash = hash('sha256', '');
+        $cacheKey = "detours." . $hash . option('omleidingennet.plugin.organisationId');
+        $backupCacheKey = "backup.detours." . $hash . option('omleidingennet.plugin.organisationId');
 
         $detours = $cache->get($cacheKey);
         if ($refresh === false) {
@@ -242,11 +241,9 @@ GRAPHQL;
     private function filterDetours($detours, $search = null, $status = null, $areas = null, $hideCompleted = false)
     {
         if (isset($search) && !empty($search)) {
-            $query = $search;
-
-            $detours = array_values(array_filter($detours, function ($detour) use ($query) {
-                return stripos($detour['name'] ?? '', $query) !== false
-                    || stripos($detour['description'] ?? '', $query) !== false;
+            $detours = array_values(array_filter($detours, function ($detour) use ($search) {
+                return stripos($detour['name'] ?? '', $search) !== false
+                    || stripos($detour['description'] ?? '', $search) !== false;
             }));
         }
 
