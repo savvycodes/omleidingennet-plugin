@@ -34,9 +34,11 @@ class DetoursPage extends Page
         $areas = get('areas');
         $results = $this->detours($search, $status, $areas);
         $pages = [];
+        $remoteSlugs = [];
 
         foreach ($results as $detour) {
             $slug = $detour['slug'];
+            $remoteSlugs[$slug] = true;
             $page = $this->subpages()->find($slug);
             $content = $page ? $page->content()->toArray() : [];
 
@@ -62,6 +64,22 @@ class DetoursPage extends Page
                         'uuid' => $detour['id'],
                     ]
                 ),
+            ];
+        }
+
+        // Keep locally stored detours editable after they have been removed from Omleidingennet.
+        foreach ($this->subpages() as $page) {
+            if (isset($remoteSlugs[$page->slug()])) {
+                continue;
+            }
+
+            $pages[] = [
+                'slug' => $page->slug(),
+                'num' => null,
+                'template' => 'detour',
+                'model' => 'detour',
+                'files' => $page->files()->toArray(),
+                'content' => $page->content()->toArray(),
             ];
         }
 
