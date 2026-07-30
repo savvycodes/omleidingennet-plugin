@@ -66,7 +66,13 @@ class RefreshCache
         }
 
         if (empty($errors) === false) {
-            throw new RuntimeException('Omleidingennet cache refresh failed');
+            $messages = [];
+
+            foreach ($errors as $key => $message) {
+                $messages[] = $key . ': ' . $message;
+            }
+
+            throw new RuntimeException('Omleidingennet cache refresh failed: ' . implode('; ', $messages));
         }
     }
 }

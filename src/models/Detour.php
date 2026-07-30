@@ -55,13 +55,13 @@ class DetourPage extends Page
         if ($fase) {
             $start = A::get($fase, 'beginDateAlternative');
             if (!$start) {
-                $start = A::get($fase, 'beginDate') ? new \DateTime(A::get($fase, 'beginDate'), new \DateTimeZone('Europe/Amsterdam')) : null;
+                $start = A::get($fase, 'beginDate') ? $this->localDate(A::get($fase, 'beginDate')) : null;
                 $start = $start ? $start->format('j-m-Y') : null;
             }
 
             $end = A::get($fase, 'endDateAlternative');
             if (!$end) {
-                $end = A::get($fase, 'endDate') ? new \DateTime(A::get($fase, 'endDate'), new \DateTimeZone('Europe/Amsterdam')) : null;
+                $end = A::get($fase, 'endDate') ? $this->localDate(A::get($fase, 'endDate')) : null;
                 $end = $end ? $end->format('j-m-Y') : null;
             }
         } else {
@@ -83,7 +83,7 @@ class DetourPage extends Page
                     $endDateString = A::get($fase, 'endDate');
 
                     if ($beginDateString) {
-                        $date = new \DateTime($beginDateString, new \DateTimeZone('Europe/Amsterdam'));
+                        $date = $this->localDate($beginDateString);
 
                         if (!$earliest || $date < $earliest) {
                             $earliest = $date;
@@ -91,7 +91,7 @@ class DetourPage extends Page
                     }
 
                     if ($endDateString) {
-                        $date = new \DateTime($endDateString, new \DateTimeZone('Europe/Amsterdam'));
+                        $date = $this->localDate($endDateString);
 
                         if (!$latest || $date > $latest) {
                             $latest = $date;
@@ -139,7 +139,7 @@ class DetourPage extends Page
             return $first_fase['beginDateAlternative'];
         }
 
-        return date('j-m-Y', strtotime($first_fase['beginDate']));
+        return $this->localDate($first_fase['beginDate'])->format('j-m-Y');
     }
 
     public function endDate()
@@ -156,6 +156,11 @@ class DetourPage extends Page
             return $fase['endDateAlternative'];
         }
 
-        return date('j-m-Y', strtotime($fase['endDate']));
+        return $this->localDate($fase['endDate'])->format('j-m-Y');
+    }
+
+    private function localDate(string $date): \DateTimeImmutable
+    {
+        return (new \DateTimeImmutable($date))->setTimezone(new \DateTimeZone('Europe/Amsterdam'));
     }
 }
