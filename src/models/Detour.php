@@ -67,6 +67,10 @@ class DetourPage extends Page
         } else {
             $fases = $this->fases();
 
+            if (empty($fases)) {
+                return 'Nader te bepalen datum';
+            }
+
             // if first fase has a textual beginDateAlternative, use that
             $start = A::get(A::first($fases), 'beginDateAlternative');
 
