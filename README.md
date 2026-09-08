@@ -46,6 +46,12 @@ Public Omleidingennet routes serve cached data only. They do not call the Omleid
 kirby omleidingennet:refresh-cache
 ```
 
+Or directly within the docker container:
+
+```
+php vendor/bin/kirby omleidingennet:refresh-cache
+```
+
 In this project, you can also run it through Composer without a global `kirby` binary:
 
 ```
