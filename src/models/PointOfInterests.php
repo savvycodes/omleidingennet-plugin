@@ -19,7 +19,10 @@ class PointOfInterestsPage extends Page
             return static::$subpages;
         }
 
-        return static::$subpages = Pages::factory($this->inventory()['children'], $this);
+        return static::$subpages = Pages::factory(
+            preferNumberedChildren($this->inventory()['children']),
+            $this
+        );
     }
 
     public function children(): Pages
