@@ -20,7 +20,10 @@ class DetoursPage extends Page
             return static::$subpages;
         }
 
-        return static::$subpages = Pages::factory($this->inventory()['children'], $this);
+        return static::$subpages = Pages::factory(
+            preferNumberedChildren($this->inventory()['children']),
+            $this
+        );
     }
 
     public function children(): Pages
@@ -75,7 +78,7 @@ class DetoursPage extends Page
 
             $pages[] = [
                 'slug' => $page->slug(),
-                'num' => null,
+                'num' => $page->num(),
                 'template' => 'detour',
                 'model' => 'detour',
                 'files' => $page->files()->toArray(),

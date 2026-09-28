@@ -140,3 +140,19 @@ function flattenArray($array): string
 
     return implode(' ', $flatArray);
 }
+
+function preferNumberedChildren(array $children): array
+{
+    $uniqueChildren = [];
+
+    foreach ($children as $child) {
+        $slug = $child['slug'] ?? null;
+        $current = $uniqueChildren[$slug] ?? null;
+
+        if ($current === null || (($child['num'] ?? null) !== null && ($current['num'] ?? null) === null)) {
+            $uniqueChildren[$slug] = $child;
+        }
+    }
+
+    return array_values($uniqueChildren);
+}
