@@ -10,7 +10,7 @@ class Traveler
     public static function transportation(?string $detourId = null): array
     {
         $cache = kirby()->cache('omleidingennet.plugin');
-        $key = 'transportation.v2.' . option('omleidingennet.plugin.organisationId') . ($detourId !== null ? '.' . $detourId : '');
+        $key = 'transportation.' . hash('sha256', option('omleidingennet.plugin.url') . '|' . option('omleidingennet.plugin.organisationId') . '|' . ($detourId ?? ''));
         if (($vehicles = $cache->get($key)) !== null) {
             return $vehicles;
         }
@@ -23,8 +23,15 @@ class Traveler
             ]),
         ]);
         $data = $response->json();
-        error_log('OmleidingenNet transportation: detourId=' . ($detourId ?? 'none') . '; HTTP ' . $response->code() . '; response=' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         if ($response->code() !== 200 || !empty($data['errors']) || !is_array($data['data']['transportation'] ?? null)) {
+            error_log('OmleidingenNet transportation failed: ' . json_encode([
+                'endpoint' => option('omleidingennet.plugin.url') . '/api/graphql',
+                'organisationId' => option('omleidingennet.plugin.organisationId'),
+                'httpStatus' => $response->code(),
+                'errors' => $data['errors'] ?? null,
+                'response' => $data,
+                'nonJsonBodyPreview' => $data === null ? substr($response->content(), 0, 500) : null,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             throw new RuntimeException('Vervoermiddelen konden niet worden geladen. Probeer het later opnieuw.');
         }
         $vehicles = $data['data']['transportation'];
@@ -72,6 +79,11 @@ GRAPHQL;
         ]);
         $data = $response->json();
         if ($response->code() !== 200 || !is_array($data) || !empty($data['errors']) || !isset($data['data']['checkRoute']['detours']) || !is_array($data['data']['checkRoute']['detours'])) {
+            error_log('OmleidingenNet checkRoute failed: ' . json_encode([
+                'endpoint' => option('omleidingennet.plugin.url') . '/api/graphql',
+                'httpStatus' => $response->code(),
+                'errors' => $data['errors'] ?? null,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             throw new RuntimeException('De route kon niet worden gecontroleerd. Probeer het later opnieuw.');
         }
         $detours = $data['data']['checkRoute']['detours'];

@@ -10,7 +10,8 @@ class Token
     public static function get()
     {
         $cache = kirby()->cache('omleidingennet.plugin');
-        $token = $cache->get('token');
+        $key = 'token.' . hash('sha256', option('omleidingennet.plugin.url') . '|' . option('omleidingennet.plugin.clientId') . '|' . option('omleidingennet.plugin.clientSecret'));
+        $token = $cache->get($key);
 
         if ($token === null) {
             // get access token from omleidingennet
@@ -26,10 +27,10 @@ class Token
                 ])
             ]);
 
-            if ($res->code() === 200) {
-                $data = $res->json();
+            $data = $res->json();
+            if ($res->code() === 200 && is_string($data['access_token'] ?? null) && is_numeric($data['expires_in'] ?? null)) {
 
-                $cache->set('token', $data['access_token'], $data['expires_in'] / 60);
+                $cache->set($key, $data['access_token'], max(1, ($data['expires_in'] - 60) / 60));
                 return $data['access_token'];
             }
             throw new Exception('Could not fetch access token');
