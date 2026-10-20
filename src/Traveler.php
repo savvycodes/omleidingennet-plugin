@@ -10,7 +10,7 @@ class Traveler
     public static function transportation(?string $detourId = null): array
     {
         $cache = kirby()->cache('omleidingennet.plugin');
-        $key = 'transportation.' . hash('sha256', option('omleidingennet.plugin.url') . '|' . option('omleidingennet.plugin.organisationId') . '|' . ($detourId ?? ''));
+        $key = 'transportation' . ($detourId !== null ? '.' . $detourId : '');
         if (($vehicles = $cache->get($key)) !== null) {
             return $vehicles;
         }
