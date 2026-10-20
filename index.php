@@ -15,6 +15,7 @@ F::loadClasses([
     'omleidingennet\\plugin\\organisation' => 'src/Organisation.php',
     'omleidingennet\\plugin\\cache' => 'src/Cache.php',
     'omleidingennet\\plugin\\refreshcache' => 'src/RefreshCache.php',
+    'omleidingennet\\plugin\\traveler' => 'src/Traveler.php',
 ], __DIR__);
 
 Kirby::plugin('omleidingennet/plugin', [
