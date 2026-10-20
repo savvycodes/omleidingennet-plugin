@@ -32,7 +32,7 @@ class Traveler
                 'response' => $data,
                 'nonJsonBodyPreview' => $data === null ? substr($response->content(), 0, 500) : null,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-            throw new RuntimeException('Vervoermiddelen konden niet worden geladen. Probeer het later opnieuw.');
+            throw new RuntimeException('Vervoersmiddelen konden niet worden geladen. Probeer het later opnieuw.');
         }
         $vehicles = $data['data']['transportation'];
         $cache->set($key, $vehicles, 60);
