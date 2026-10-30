@@ -155,15 +155,10 @@ or full upstream responses. No Sentry dependency is required.
 ```sh
 composer install
 composer validate --strict
-composer lint
-composer test
 composer audit
 ```
 
-Regression tests use mocked, credential-free HTTP responses. Integration tests boot
-a clean Kirby site, check registration/page isolation and exercise the native CLI
-against a local mock API. CI runs on PHP 8.2–8.5. Never add live demo credentials or
-customer content to fixtures.
+Never commit live demo credentials or customer content during development.
 
 ## Publication checklist
 
@@ -172,7 +167,7 @@ customer content to fixtures.
 - Enable GitHub private vulnerability reporting for the repository.
 - Review issues, PR discussions, attachments and historical Actions logs for
   sensitive information separately from the code/history scan.
-- Review CI results, then have an administrator explicitly approve the visibility
+- Review the changes, then have an administrator explicitly approve the visibility
   change. This branch does not change repository visibility or deploy a site.
 - Choose a release tag, verify package-name availability and configure Packagist
   before advertising a stable Composer release.

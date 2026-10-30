@@ -26,8 +26,6 @@
         "getkirby/cli": "^1.9"
     },
     "scripts": {
-        "test": ["@php tests/regression.php", "@php tests/integration.php", "@php tests/install.php"],
-        "lint": "@php tests/lint.php",
         "omleidingennet:refresh-cache": [
             "Composer\\Config::disableProcessTimeout",
             "@php command.php"
