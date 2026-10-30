@@ -1,9 +1,16 @@
 {
     "name": "omleidingennet/plugin",
-    "description": "Omleidingennet Plugin",
+    "description": "Omleidingennet detours, points of interest and route checks for Kirby CMS",
     "license": "MIT",
     "type": "kirby-plugin",
-    "version": "1.0.0",
+    "extra": {
+        "installer-name": "omleidingennet"
+    },
+    "keywords": ["kirby", "omleidingennet", "detours"],
+    "support": {
+        "source": "https://github.com/savvycodes/omleidingennet-plugin",
+        "issues": "https://github.com/savvycodes/omleidingennet-plugin/issues"
+    },
     "authors": [
         {
             "name": "Daan Rosbergen",
@@ -11,9 +18,16 @@
         }
     ],
     "require": {
-        "getkirby/composer-installer": "^1.1"
+        "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+        "getkirby/cms": "^5.6.1",
+        "getkirby/composer-installer": "^1.2.1"
+    },
+    "require-dev": {
+        "getkirby/cli": "^1.9"
     },
     "scripts": {
+        "test": ["@php tests/regression.php", "@php tests/integration.php", "@php tests/install.php"],
+        "lint": "@php tests/lint.php",
         "omleidingennet:refresh-cache": [
             "Composer\\Config::disableProcessTimeout",
             "@php command.php"

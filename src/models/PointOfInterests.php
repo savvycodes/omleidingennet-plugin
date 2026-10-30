@@ -2,24 +2,22 @@
 
 namespace Omleidingennet\Plugin;
 
-use Exception;
 use Kirby\Cms\Page;
 use Kirby\Cms\Pages;
 use Kirby\Cms\Response;
-use Kirby\Http\Remote;
 use Kirby\Toolkit\Str;
 
 class PointOfInterestsPage extends Page
 {
-    static $subpages = null;
+    protected $localSubpages = null;
 
     public function subpages()
     {
-        if (static::$subpages) {
-            return static::$subpages;
+        if ($this->localSubpages !== null) {
+            return $this->localSubpages;
         }
 
-        return static::$subpages = Pages::factory(
+        return $this->localSubpages = Pages::factory(
             preferNumberedChildren($this->inventory()['children']),
             $this
         );
@@ -31,8 +29,8 @@ class PointOfInterestsPage extends Page
             return $this->children;
         }
 
-        $search = get('search_query');
-        $type = get('poi_type');
+        $search = Api::filter('search_query');
+        $type = Api::filter('poi_type');
         $results = $this->pois($search, $type);
         $pages = [];
 
@@ -43,7 +41,7 @@ class PointOfInterestsPage extends Page
                 'slug' => $slug,
                 'num' => 0,
                 'template' => 'point-of-interest',
-                'model' => 'PointOfInterest',
+                'model' => 'point-of-interest',
                 'files' => $page ? $page->files()->toArray() : null,
                 'content' => [
                     'title' => $poi['name'],
@@ -61,18 +59,12 @@ class PointOfInterestsPage extends Page
         return $this->children = Pages::factory($pages, $this);
     }
 
-    private function getToken()
-    {
-        return Token::get();
-    }
-
     private function pois($search = null, $type = null, $refresh = false)
     {
         $cache = kirby()->cache('omleidingennet.plugin');
         $backupCache = kirby()->cache('backup.omleidingennet.plugin');
 
-        $hashKey = (empty($status) ? '' :  $status) . (empty($areas) ? '' : $areas);
-        $hash = hash('sha256', $hashKey);
+        $hash = hash('sha256', '');
 
         $cacheKey = "pois." . $hash . option('omleidingennet.plugin.organisationId');
         $backupCacheKey = "backup.pois." . $hash . option('omleidingennet.plugin.organisationId');
@@ -80,20 +72,20 @@ class PointOfInterestsPage extends Page
         $pois = $cache->get($cacheKey);
         if ($refresh === false) {
             if ($pois !== null) {
-                return $pois;
+                return $this->filterPois($pois, $search, $type);
             }
 
             $backupPois = $backupCache->get($backupCacheKey);
             if ($backupPois !== null) {
-                return $backupPois;
+                return $this->filterPois($backupPois, $search, $type);
             }
 
             $cliPois = Cache::cli('omleidingennet.plugin')->get($cacheKey);
             if ($cliPois !== null) {
-                return $cliPois;
+                return $this->filterPois($cliPois, $search, $type);
             }
 
-            return Cache::cli('backup.omleidingennet.plugin')->get($backupCacheKey) ?? [];
+            return $this->filterPois(Cache::cli('backup.omleidingennet.plugin')->get($backupCacheKey) ?? [], $search, $type);
         }
 
         $query = <<<'GRAPHQL'
@@ -122,84 +114,23 @@ class PointOfInterestsPage extends Page
           }
 GRAPHQL;
 
-        $token = $this->getToken();
-        $take = 1000; // todo: pagination
+        $pois = Api::paginate($query, [
+            'organisationId' => option('omleidingennet.plugin.organisationId'),
+        ], 'pointOfInterests', 'pois', 1000);
+        Api::validatePois($pois);
+        Cache::store($cache, $backupCache, $cacheKey, $backupCacheKey, $pois);
 
-        $filter = [
-            'take' => $take,
-        ];
+        return $this->filterPois($pois, $search, $type);
+    }
 
-        if (isset($search) && !empty($search)) {
-            $filter['query'] = $search;
-        }
-
-        if (isset($type) && !empty($type)) {
-            $filter['type'] = $type;
-        }
-
-        $arr = [];
-        $skip = 0;
-        $totalCount = 0;
-        $completedFetch = false;
-        try {
-            do {
-                $filter['skip'] = $skip;
-                // there is no skip filter (yet)
-                $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
-                    'headers' => [
-                        'Content-Type: application/json',
-                        'Authorization: Bearer ' . $token
-                    ],
-                    'data' => json_encode([
-                        'query' => $query,
-                        'variables' => [
-                            'organisationId' => option('omleidingennet.plugin.organisationId'),
-                            'filter' => $filter
-                        ]
-                    ])
-                ]);
-
-                if ($res->code() === 200) {
-                    $data = $res->json();
-                    if (isset($data['error'])) {
-                        throw new Exception($data['error']['message']);
-                    }
-
-                    if (isset($data['errors'])) {
-                        throw new Exception(json_encode($data['errors'][0]['message']));
-                    }
-
-                    $totalCount = $data['data']['pointOfInterests']['totalCount'];
-                    $arr = array_merge($arr, $data['data']['pointOfInterests']['pois']);
-                    $skip += $take;
-                } else {
-                    throw new Exception('Could not fetch detours: ' . $res->code());
-                }
-            } while (count($arr) < $totalCount);
-
-            $completedFetch = count($arr) >= $totalCount;
-        } catch (Exception $e) {
-            \Sentry\captureException($e);
-
-            // Fallback to backup cache if request fails
-            $backupPois = $backupCache->get($backupCacheKey);
-            if ($backupPois !== null) {
-                return $backupPois;
-            }
-        }
-
-        if ($completedFetch === false) {
-            return $arr;
-        }
-
-        // cache until the Kirby command refreshes it
-        if (empty($search)) {
-            $cache->set($cacheKey, $arr);
-            $backupCache->set($backupCacheKey, $arr); // no timout for backup cache
-
-        }
-
-        return $arr;
+    private function filterPois(array $pois, ?string $search, ?string $type): array
+    {
+        return array_values(array_filter($pois, static function ($poi) use ($search, $type) {
+            return ($search === null || $search === '' ||
+                stripos($poi['name'] ?? '', $search) !== false ||
+                stripos($poi['description'] ?? '', $search) !== false) &&
+                ($type === null || $type === '' || ($poi['type']['id'] ?? null) === $type);
+        }));
     }
 
     public function refreshCache()
@@ -209,8 +140,8 @@ GRAPHQL;
 
     public function apiPointOfInterests()
     {
-        $search = get('search_query');
-        $pois = $this->pois($search);
+        $search = Api::filter('search_query');
+        $pois = $this->pois($search, Api::filter('poi_type'));
 
         foreach ($pois as &$poi) {
             $poi['slug'] = Str::slug($poi['name']);
@@ -241,10 +172,7 @@ GRAPHQL;
     {
         $cache = kirby()->cache('omleidingennet.plugin');
         $backupCache = kirby()->cache('backup.omleidingennet.plugin');
-        $hashKey = (empty($status) ? '' :  $status) . (empty($areas) ? '' : $areas);
-        $hash = hash('sha256', $hashKey);
-
-        // create sha256 of status and areas
+        $hash = hash('sha256', '');
         $cacheKey = "types." . $hash . option('omleidingennet.plugin.organisationId');
         $backupCacheKey = "backup.types." . $hash . option('omleidingennet.plugin.organisationId');
 
@@ -279,49 +207,13 @@ GRAPHQL;
           }
 GRAPHQL;
 
-        $token = $this->getToken();
-        $take = 1000; // todo: pagination
+        $types = Api::request($query, [
+            'organisationId' => option('omleidingennet.plugin.organisationId'),
+        ], 'pointOfInterestTypes');
+        Api::validateList($types, ['id' => 'string', 'name' => 'string']);
+        Cache::store($cache, $backupCache, $cacheKey, $backupCacheKey, $types);
 
-        $filter = [
-            'take' => $take,
-        ];
-        $filter['type'] = '';
-
-        $arr = [];
-        $totalCount = 0;
-        $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
-            'headers' => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $token
-            ],
-            'data' => json_encode([
-                'query' => $query,
-                'variables' => [
-                    'organisationId' => option('omleidingennet.plugin.organisationId'),
-                ]
-            ])
-        ]);
-
-        if ($res->code() === 200) {
-            $data = $res->json();
-            if (isset($data['error'])) {
-                throw new Exception($data['error']['message']);
-            }
-
-            $arr = array_merge($arr, $data['data']['pointOfInterestTypes']);
-        } else {
-            // disabled for now to prevent site from crashing
-            // $data = $res->json_encode();
-            // throw new Exception($data, $res->code());
-        }
-
-        // cache until the Kirby command refreshes it
-        if (empty($search)) {
-            $cache->set($cacheKey, $arr);
-            $backupCache->set($backupCacheKey, $arr);
-        }
-
-        return $arr;
+        return $types;
     }
 
     public function getTypes()

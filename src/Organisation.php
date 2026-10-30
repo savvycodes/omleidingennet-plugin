@@ -2,8 +2,6 @@
 
 namespace Omleidingennet\Plugin;
 
-use Exception;
-use Kirby\Http\Remote;
 use Kirby\Http\Response;
 
 class Organisation
@@ -44,41 +42,13 @@ class Organisation
           }
         GRAPHQL;
 
-        $token = Token::get();
+        $organisation = Api::request($query, [
+            'organisationId' => option('omleidingennet.plugin.organisationId'),
+        ], 'organisation');
+        Api::validateRecord($organisation, ['id' => 'string', 'geometry' => 'nullable']);
+        Cache::store($cache, $backupCache, $key, $backupKey, $organisation);
 
-        $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
-            'headers' => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $token
-            ],
-            'data' => json_encode([
-                'query' => $query,
-                'variables' => [
-                    'organisationId' => option('omleidingennet.plugin.organisationId'),
-                ]
-            ])
-        ]);
-
-        if ($res->code() === 200) {
-            $data = $res->json();
-            if (isset($data['error'])) {
-                throw new Exception($data['error']['message']);
-            }
-            if (isset($data['errors'])) {
-                $errorMessages = array_map(fn($error) => $error['message'], $data['errors']);
-                throw new Exception(json_encode($errorMessages));
-            }
-
-            $organisation = $data['data']['organisation'];
-            // cache until the Kirby command refreshes it
-            if ($organisation) {
-                $cache->set($key, $organisation);
-                $backupCache->set($backupKey, $organisation);
-            }
-
-            return $organisation;
-        }
-        throw new Exception('Could not fetch organisation');
+        return $organisation;
     }
 
     public function apiOrganisation()

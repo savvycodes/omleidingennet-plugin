@@ -8,6 +8,7 @@ F::loadOnce(__DIR__ . '/src/Search.php');
 
 F::loadClasses([
     'omleidingennet\\plugin\\token' => 'src/Token.php',
+    'omleidingennet\\plugin\\api' => 'src/Api.php',
     'omleidingennet\\plugin\\detourspage' => 'src/models/Detours.php',
     'omleidingennet\\plugin\\detourpage' => 'src/models/Detour.php',
     'omleidingennet\\plugin\\pointofinterestspage' => 'src/models/PointOfInterests.php',
@@ -93,12 +94,19 @@ Kirby::plugin('omleidingennet/plugin', [
             'description' => 'Refresh Omleidingennet detours, POIs and organisation cache',
             'args' => [],
             'command' => function ($cli) {
-                \Omleidingennet\Plugin\RefreshCache::run($cli);
+                try {
+                    \Omleidingennet\Plugin\RefreshCache::run($cli);
+                } catch (\Throwable $e) {
+                    // Kirby CLI catches exceptions and exits 0 by default.
+                    // Schedulers need a real failure status from this command.
+                    $cli->error('Omleidingennet cache refresh failed; check configuration, cache permissions and dataset errors.');
+                    exit(1);
+                }
             }
         ],
     ],
     'components' => [
-        'search' => function (Kirby $kirby, Collection $collection, string $query = null, $params = []) {
+        'search' => function (Kirby $kirby, Collection $collection, ?string $query = null, $params = []) {
 
             // Only replace the search component for Pages collections
             if (is_a($collection, 'Kirby\Cms\Pages') === true) {

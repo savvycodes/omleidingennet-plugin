@@ -1,0 +1,10 @@
+title: Locaties
+icon: pin
+
+sections:
+  locations:
+    type: pages
+    headline: Locaties uit Omleidingennet
+    templates:
+      - point-of-interest
+    create: false

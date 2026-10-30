@@ -6,3 +6,13 @@
 
 # Composer files
 /vendor
+
+# Local credentials and generated Kirby development files
+.env
+.env.*
+!.env.example
+*.local.php
+/kirby
+/site
+/media
+/.phpunit.cache
