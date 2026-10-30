@@ -6,7 +6,8 @@ a native cache-refresh command and server-side Traveler helpers.
 
 ## Requirements
 
-- Kirby **5.6.1 or later within 5.x** and PHP **8.2–8.5**.
+- An existing Kirby installation with a compatible PHP version. No formal
+  compatibility range is declared by this plugin.
 - Omleidingennet API credentials with access to your organisation's data.
 - A writable, non-public Kirby cache directory.
 - `getkirby/cli` for scheduled/manual cache refreshes.
@@ -77,7 +78,9 @@ files: they include access tokens as well as project data.
 
 Use the `detours` blueprint/template for a detour listing and
 `point-of-interests` for a POI listing. Their virtual children use `detour` and
-`point-of-interest`. Add your own templates/snippets to render them. Existing local
+`point-of-interest`. Provide your own POI blueprints: the plugin registers their
+names but does not currently include those files. Add your own templates/snippets
+to render the pages. Existing local
 detour children remain editable after removal upstream; do not treat them as proof
 that a detour remains active in the public API.
 
@@ -94,16 +97,14 @@ Schedule this native command at an interval appropriate to your site. Public
 listing endpoints and page models **read caches only**; an empty cache gives empty
 listings (organisation is `null`), not a live API request.
 
-Each dataset is replaced only after a complete, validated response. Upstream
-failures leave its previous cache intact and make the command fail with a nonzero
-exit status. Other datasets are still attempted; the refresh is not a transaction
-across all five datasets. Successful empty responses clear old data. Monitor
-command failures and freshness; cached public data has no automatic expiration.
+Monitor refresh output and data freshness; cached public data has no automatic
+expiration. Existing error handling does not consistently propagate upstream
+failures, and Kirby CLI may exit successfully after displaying an error. Do not
+rely on the exit status alone or assume every dataset was refreshed successfully.
+Some error paths call Sentry functions without a declared Sentry dependency.
 
-Overlapping refreshes for the same cache root and organisation are skipped using
-an OS file lock. This protects processes on one host/shared filesystem that
-supports `flock`; it is not a distributed lock for independent container filesystems.
-Do not delete lock files while processes may be running.
+The existing cache-based overlap guard is not atomic. Schedule refreshes so they
+do not overlap; there is no OS-level or distributed lock.
 
 Kirby's HTTP and CLI cache prefixes can differ. The plugin falls back to the
 conventional CLI `_` cache namespace for public reads. Host-based multisite projects
@@ -124,12 +125,13 @@ not inherited by consuming projects; prefer the native Kirby CLI above.
 | --- | --- | --- |
 | `/omleidingennet/detours` | `detours` | `search_query`, `detour_status`, comma-separated `areas` IDs |
 | `/omleidingennet/detours/{id}` | `detours` (one item) | None |
-| `/omleidingennet/pois` | `pois` | `search_query`, `poi_type` (type ID) |
+| `/omleidingennet/pois` | `pois` | Cached listing; search/type filtering is not reliably applied |
 | `/omleidingennet/pois/{id}` | `pois` (one item) | None |
 | `/omleidingennet/organisation` | `organisation` | None |
 
-Unknown detail IDs return HTTP 404. Filters must be scalar strings of at most
-1,000 bytes. Detour listings hide `Afgerond` by default unless a status is selected.
+Unknown detail IDs return HTTP 404. Supply scalar strings for filters; array-valued
+parameters are not validated and may cause errors. Detour listings hide `Afgerond`
+by default unless a status is selected.
 Detail endpoints can still return completed projects.
 
 **These endpoints are unauthenticated.** Detour data includes descriptions,
@@ -141,14 +143,17 @@ in your templates and sanitize any HTML you choose to render.
 ## Traveler helpers
 
 `Omleidingennet\Plugin\Traveler::transportation($detourId = null)` caches available
-transportation modes for 60 minutes, scoped to credentials/organisation.
+transportation modes for 60 minutes. Token and transportation cache keys are not
+scoped to credentials/organisation; keep tenant cache roots isolated and clear
+caches when changing credentials.
 `Traveler::check($detourId = null)` reads `vehicle`, `from` and `to` from the Kirby
 request body. Coordinates are `latitude, longitude`; vehicle IDs are validated.
 Unlike the listing API, these helpers make live authenticated upstream requests.
 They do not register routes automatically. If you expose them, add suitable request
 limits and error handling. Route coordinates are sent to Omleidingennet; document
-this in your site's privacy policy. The plugin does not log request coordinates
-or full upstream responses. No Sentry dependency is required.
+this in your site's privacy policy. Existing Traveler diagnostics can log upstream
+responses and route-check results; restrict access to logs and apply an appropriate
+retention policy.
 
 ## Development
 

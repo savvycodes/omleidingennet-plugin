@@ -18,12 +18,7 @@
         }
     ],
     "require": {
-        "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
-        "getkirby/cms": "^5.6.1",
-        "getkirby/composer-installer": "^1.2.1"
-    },
-    "require-dev": {
-        "getkirby/cli": "^1.9"
+        "getkirby/composer-installer": "^1.1"
     },
     "scripts": {
         "omleidingennet:refresh-cache": [

@@ -2,6 +2,7 @@
 
 namespace Omleidingennet\Plugin;
 
+use Kirby\Http\Remote;
 use RuntimeException;
 
 class Traveler
@@ -9,17 +10,31 @@ class Traveler
     public static function transportation(?string $detourId = null): array
     {
         $cache = kirby()->cache('omleidingennet.plugin');
-        $key = 'transportation.' . Cache::scope() . '.' . hash('sha256', $detourId ?? '');
+        $key = 'transportation' . ($detourId !== null ? '.' . $detourId : '');
         if (($vehicles = $cache->get($key)) !== null) {
             return $vehicles;
         }
 
-        $vehicles = Api::request(
-            'query Transportation($organisationId: String!, $detourId: String) { transportation(organisationId: $organisationId, detourId: $detourId) { id name planetFriendly } }',
-            ['organisationId' => option('omleidingennet.plugin.organisationId'), 'detourId' => $detourId],
-            'transportation'
-        );
-        Api::validateList($vehicles, ['id' => 'string', 'name' => 'string']);
+        $response = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
+            'headers' => ['Content-Type: application/json', 'Authorization: Bearer ' . Token::get()],
+            'data' => json_encode([
+                'query' => 'query Transportation($organisationId: String!, $detourId: String) { transportation(organisationId: $organisationId, detourId: $detourId) { id name planetFriendly } }',
+                'variables' => ['organisationId' => option('omleidingennet.plugin.organisationId'), 'detourId' => $detourId],
+            ]),
+        ]);
+        $data = $response->json();
+        if ($response->code() !== 200 || !empty($data['errors']) || !is_array($data['data']['transportation'] ?? null)) {
+            error_log('OmleidingenNet transportation failed: ' . json_encode([
+                'endpoint' => option('omleidingennet.plugin.url') . '/api/graphql',
+                'organisationId' => option('omleidingennet.plugin.organisationId'),
+                'httpStatus' => $response->code(),
+                'errors' => $data['errors'] ?? null,
+                'response' => $data,
+                'nonJsonBodyPreview' => $data === null ? substr($response->content(), 0, 500) : null,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            throw new RuntimeException('Vervoersmiddelen konden niet worden geladen. Probeer het later opnieuw.');
+        }
+        $vehicles = $data['data']['transportation'];
         $cache->set($key, $vehicles, 60);
         return $vehicles;
     }
@@ -55,14 +70,35 @@ query CheckRoute($detourId: String, $from: RoutePoint!, $to: RoutePoint!, $vehic
 }
 GRAPHQL;
 
-        $result = Api::request($query, [
-            'detourId' => $detourId,
-            'from' => $point(kirby()->request()->body()->get('from')),
-            'to' => $point(kirby()->request()->body()->get('to')),
-            'vehicleId' => $vehicle,
-        ], 'checkRoute');
-        Api::validateRecord($result, ['detours' => 'array']);
-        Api::validateList($result['detours'], ['detourId' => 'string', 'phases' => 'array']);
-        return $result['detours'];
+        $response = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
+            'headers' => ['Content-Type: application/json', 'Authorization: Bearer ' . Token::get()],
+            'data' => json_encode([
+                'query' => $query,
+                'variables' => ['detourId' => $detourId, 'from' => $point(kirby()->request()->body()->get('from')), 'to' => $point(kirby()->request()->body()->get('to')), 'vehicleId' => $vehicle],
+            ]),
+        ]);
+        $data = $response->json();
+        if ($response->code() !== 200 || !is_array($data) || !empty($data['errors']) || !isset($data['data']['checkRoute']['detours']) || !is_array($data['data']['checkRoute']['detours'])) {
+            error_log('OmleidingenNet checkRoute failed: ' . json_encode([
+                'endpoint' => option('omleidingennet.plugin.url') . '/api/graphql',
+                'httpStatus' => $response->code(),
+                'errors' => $data['errors'] ?? null,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            throw new RuntimeException('De route kon niet worden gecontroleerd. Probeer het later opnieuw.');
+        }
+        $detours = $data['data']['checkRoute']['detours'];
+        $hasAffectedPhase = false;
+        foreach ($detours as $detour) {
+            foreach ($detour['phases'] ?? [] as $phase) {
+                if (!empty($phase['touches'])) {
+                    $hasAffectedPhase = true;
+                    break 2;
+                }
+            }
+        }
+        if (!$hasAffectedPhase) {
+            error_log('OmleidingenNet checkRoute: no affected phases; detours=' . json_encode($detours, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        }
+        return $data['data']['checkRoute']['detours'];
     }
 }

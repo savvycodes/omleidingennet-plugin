@@ -2,22 +2,25 @@
 
 namespace Omleidingennet\Plugin;
 
+use Exception;
 use Kirby\Cms\Page;
 use Kirby\Cms\Pages;
 use Kirby\Cms\Response;
+use Kirby\Http\Remote;
+use Sentry;
 use Kirby\Toolkit\A;
 
 class DetoursPage extends Page
 {
-    protected $localSubpages = null;
+    static $subpages = null;
 
     public function subpages()
     {
-        if ($this->localSubpages !== null) {
-            return $this->localSubpages;
+        if (static::$subpages) {
+            return static::$subpages;
         }
 
-        return $this->localSubpages = Pages::factory(
+        return static::$subpages = Pages::factory(
             preferNumberedChildren($this->inventory()['children']),
             $this
         );
@@ -29,9 +32,9 @@ class DetoursPage extends Page
             return $this->children;
         }
 
-        $search = Api::filter('search_query');
-        $status = Api::filter('detour_status');
-        $areas = Api::filter('areas');
+        $search = get('search_query');
+        $status = get('detour_status');
+        $areas = get('areas');
         $results = $this->detours($search, $status, $areas);
         $pages = [];
         $remoteSlugs = [];
@@ -84,6 +87,11 @@ class DetoursPage extends Page
         }
 
         return $this->children = Pages::factory($pages, $this);
+    }
+
+    private function getToken()
+    {
+        return Token::get();
     }
 
     private function detours($search = null, $status = null, $areas = null, $hideCompleted = false, $refresh = false)
@@ -182,14 +190,71 @@ query detours($organisationId: String!, $filter: DetoursFilter) {
 }
 GRAPHQL;
 
-        // Failed/incomplete fetches must never replace the last complete cache.
-        $detours = Api::paginate($query, [
-            'organisationId' => option('omleidingennet.plugin.organisationId'),
-        ], 'detours', 'detours', 10);
-        Api::validateDetours($detours);
+        // get detours from omleidingennet
+        $token = $this->getToken();
+        $take = 10; // todo: pagination
+
+        $filter = [
+            'take' => $take,
+        ];
+
+        // contiously fetch detours until totalCount is reached
+        $detours = [];
+        $skip = 0;
+        $totalCount = 0;
+        $completedFetch = false;
+
+        try {
+            do {
+                $filter['skip'] = $skip;
+                $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
+                    'headers' => [
+                        'Content-Type: application/json',
+                        'Authorization: Bearer ' . $token
+                    ],
+                    'data' => json_encode([
+                        'query' => $query,
+                        'variables' => [
+                            'organisationId' => option('omleidingennet.plugin.organisationId'),
+                            'filter' => $filter
+                        ]
+                    ])
+                ]);
+
+                if ($res->code() === 200) {
+                    $data = $res->json();
+
+                    if (isset($data['error'])) {
+                        throw new Exception($data['error']['message']);
+                    }
+
+                    $totalCount = $data['data']['detours']['totalCount'];
+                    $detours = array_merge($detours, $data['data']['detours']['detours']);
+
+                    $skip += $take;
+                } else {
+                    throw new Exception('Could not fetch detours: ' . $res->code());
+                }
+            } while (count($detours) < $totalCount);
+
+            $completedFetch = count($detours) >= $totalCount;
+        } catch (Exception $e) {
+            \Sentry\captureException($e);
+
+            // Fallback to backup cache if request fails
+            $backupDetours = $backupCache->get($backupCacheKey);
+            if ($backupDetours !== null) {
+                return $this->filterDetours($backupDetours, $search, $status, $areas, $hideCompleted);
+            }
+        }
+
+        if ($completedFetch === false) {
+            return $this->filterDetours($detours, $search, $status, $areas, $hideCompleted);
+        }
 
         // cache until the Kirby command refreshes it
-        Cache::store($cache, $backupCache, $cacheKey, $backupCacheKey, $detours);
+        $cache->set($cacheKey, $detours);
+        $backupCache->set($backupCacheKey, $detours); // no timout for backup cache
 
         return $this->filterDetours($detours, $search, $status, $areas, $hideCompleted);
     }
@@ -242,9 +307,9 @@ GRAPHQL;
 
     public function apiDetours()
     {
-        $search = Api::filter('search_query');
-        $status = Api::filter('detour_status');
-        $areas = Api::filter('areas');
+        $search = get('search_query');
+        $status = get('detour_status');
+        $areas = get('areas');
         $detours = $this->detours($search, $status, $areas, true);
 
         foreach ($detours as &$detour) {
@@ -311,13 +376,42 @@ query areas($organisationId: String!) {
 }
 GRAPHQL;
 
-        $areas = Api::request($query, [
-            'organisationId' => option('omleidingennet.plugin.organisationId'),
-        ], 'areas');
-        Api::validateList($areas, ['id' => 'string', 'name' => 'string', 'type' => 'string']);
-        Cache::store($cache, $backupCache, $key, $backupKey, $areas);
+        // get detours from omleidingennet
+        $token = $this->getToken();
 
-        return $areas;
+        $res = Remote::post(option('omleidingennet.plugin.url') . '/api/graphql', [
+            'headers' => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $token
+            ],
+            'data' => json_encode([
+                'query' => $query,
+                'variables' => [
+                    'organisationId' => option('omleidingennet.plugin.organisationId'),
+                ]
+            ])
+        ]);
+
+        if ($res->code() === 200) {
+            $data = $res->json();
+            if (isset($data['error'])) {
+                throw new Exception($data['error']['message']);
+            }
+            if (isset($data['errors'])) {
+                throw new Exception(json_encode($data['errors'][0]['message']));
+            }
+
+            $areas = $data['data']['areas'];
+
+            // cache until the Kirby command refreshes it
+            if ($areas) {
+                $cache->set($key, $areas);
+                $backupCache->set($backupKey, $areas);
+            }
+
+            return $areas;
+        }
+        throw new Exception('Could not fetch areas');
     }
 
     public function areas()
