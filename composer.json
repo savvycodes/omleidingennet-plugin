@@ -1,9 +1,16 @@
 {
     "name": "omleidingennet/plugin",
-    "description": "Omleidingennet Plugin",
+    "description": "Omleidingennet detours, points of interest and route checks for Kirby CMS",
     "license": "MIT",
     "type": "kirby-plugin",
-    "version": "1.0.0",
+    "extra": {
+        "installer-name": "omleidingennet"
+    },
+    "keywords": ["kirby", "omleidingennet", "detours"],
+    "support": {
+        "source": "https://github.com/savvycodes/omleidingennet-plugin",
+        "issues": "https://github.com/savvycodes/omleidingennet-plugin/issues"
+    },
     "authors": [
         {
             "name": "Daan Rosbergen",
