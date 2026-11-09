@@ -119,8 +119,12 @@ class DetoursPage extends Page
                 return $this->filterDetours($cliDetours, $search, $status, $areas, $hideCompleted);
             }
 
-            $backupCliDetours = Cache::cli('backup.omleidingennet.plugin')->get($backupCacheKey) ?? [];
-            return $this->filterDetours($backupCliDetours, $search, $status, $areas, $hideCompleted);
+            $backupCliDetours = Cache::cli('backup.omleidingennet.plugin')->get($backupCacheKey);
+            if ($backupCliDetours !== null) {
+                return $this->filterDetours($backupCliDetours, $search, $status, $areas, $hideCompleted);
+            }
+
+            // Fetch on a cold cache; scheduled refreshes keep existing data current.
         }
 
         $query = <<<'GRAPHQL'
@@ -363,7 +367,10 @@ GRAPHQL;
                 return $cliAreas;
             }
 
-            return Cache::cli('backup.omleidingennet.plugin')->get($backupKey) ?? [];
+            $backupCliAreas = Cache::cli('backup.omleidingennet.plugin')->get($backupKey);
+            if ($backupCliAreas !== null) {
+                return $backupCliAreas;
+            }
         }
 
         $query = <<<'GRAPHQL'
