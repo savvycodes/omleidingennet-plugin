@@ -192,7 +192,7 @@ GRAPHQL;
 
         // get detours from omleidingennet
         $token = $this->getToken();
-        $take = 10; // todo: pagination
+        $take = 50;
 
         $filter = [
             'take' => $take,
