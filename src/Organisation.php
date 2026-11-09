@@ -32,7 +32,10 @@ class Organisation
                 return $cliOrganisation;
             }
 
-            return Cache::cli('backup.omleidingennet.plugin')->get($backupKey);
+            $backupCliOrganisation = Cache::cli('backup.omleidingennet.plugin')->get($backupKey);
+            if ($backupCliOrganisation !== null) {
+                return $backupCliOrganisation;
+            }
         }
 
         $query = <<<'GRAPHQL'

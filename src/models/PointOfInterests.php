@@ -93,7 +93,10 @@ class PointOfInterestsPage extends Page
                 return $cliPois;
             }
 
-            return Cache::cli('backup.omleidingennet.plugin')->get($backupCacheKey) ?? [];
+            $backupCliPois = Cache::cli('backup.omleidingennet.plugin')->get($backupCacheKey);
+            if ($backupCliPois !== null) {
+                return $backupCliPois;
+            }
         }
 
         $query = <<<'GRAPHQL'
@@ -264,7 +267,10 @@ GRAPHQL;
                 return $cliTypes;
             }
 
-            return Cache::cli('backup.omleidingennet.plugin')->get($backupCacheKey) ?? [];
+            $backupCliTypes = Cache::cli('backup.omleidingennet.plugin')->get($backupCacheKey);
+            if ($backupCliTypes !== null) {
+                return $backupCliTypes;
+            }
         }
 
         $query = <<<'GRAPHQL'
